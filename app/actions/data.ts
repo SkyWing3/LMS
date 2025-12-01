@@ -40,16 +40,94 @@ export async function getStudentGrades() {
   const enrollments = await prisma.enrollment.findMany({
     where: { userId: session.user.id },
     include: {
-      course: true
+      course: {
+        include: {
+          assignments: {
+            include: {
+              submissions: {
+                where: { studentId: session.user.id }
+              }
+            }
+          },
+          exams: {
+            include: {
+              results: {
+                where: { studentId: session.user.id }
+              }
+            }
+          }
+        }
+      }
     }
   });
 
-  return enrollments.map(e => ({
-    courseName: e.course.name,
-    grade: e.grade || 0, // Final grade
-    status: (e.grade || 0) >= 51 ? 'Aprobado' : 'Reprobado',
-    progress: e.progress
-  }));
+  return enrollments.map(e => {
+    // Calculate weighted average
+    let totalWeight = 0;
+    let weightedSum = 0;
+    const gradesDetails: any[] = [];
+
+    // Process assignments
+    e.course.assignments.forEach(a => {
+      const submission = a.submissions[0];
+      if (submission && submission.grade !== null) {
+        const score = submission.grade;
+        const max = a.totalPoints;
+        const weight = a.weight;
+        
+        // Normalize score to 0-100 scale for calculation
+        const normalizedScore = (score / max) * 100;
+        
+        weightedSum += normalizedScore * weight;
+        totalWeight += weight;
+
+        gradesDetails.push({
+          type: a.title,
+          score: score,
+          max: max,
+          weight: weight * 100, // Display as percentage
+          date: a.dueDate.toLocaleDateString()
+        });
+      }
+    });
+
+    // Process exams
+    e.course.exams.forEach(ex => {
+      const result = ex.results[0];
+      if (result) {
+        const score = result.grade;
+        const max = ex.totalPoints;
+        const weight = ex.weight;
+
+        const normalizedScore = (score / max) * 100;
+
+        weightedSum += normalizedScore * weight;
+        totalWeight += weight;
+
+        gradesDetails.push({
+          type: ex.title,
+          score: score,
+          max: max,
+          weight: weight * 100,
+          date: ex.date.toLocaleDateString()
+        });
+      }
+    });
+
+    const average = totalWeight > 0 ? (weightedSum / totalWeight) : 0;
+    
+    // Determine trend (mock logic for now, real trend would need historical data)
+    const trend = average >= 51 ? 'up' : 'down';
+
+    return {
+      id: e.course.id,
+      name: e.course.name,
+      code: e.course.code,
+      grades: gradesDetails,
+      average: parseFloat(average.toFixed(1)),
+      trend: trend
+    };
+  });
 }
 
 // --- TEACHER ACTIONS ---

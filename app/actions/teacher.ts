@@ -79,21 +79,35 @@ export async function createExam(formData: FormData) {
     return { error: 'No autorizado' };
   }
 
-  const courseId = parseInt(formData.get('courseId') as string);
+  const courseIdVal = formData.get('courseId');
   const title = formData.get('title') as string;
-  // description not in Exam schema
   const date = formData.get('date') as string;
   const time = formData.get('time') as string;
-  const duration = parseInt(formData.get('duration') as string);
-  const totalPoints = parseInt(formData.get('totalPoints') as string);
+  const durationVal = formData.get('duration');
+  const totalPointsVal = formData.get('totalPoints');
 
-  if (!courseId || !title || !date || !time || !duration || !totalPoints) {
-    return { error: 'Faltan campos requeridos' };
-  }
+  if (!courseIdVal) return { error: 'Falta el ID del curso' };
+  if (!title) return { error: 'Falta el título' };
+  if (!date) return { error: 'Falta la fecha' };
+  if (!time) return { error: 'Falta la hora' };
+  if (!durationVal) return { error: 'Falta la duración' };
+  if (!totalPointsVal) return { error: 'Faltan los puntos totales' };
+
+  const courseId = parseInt(courseIdVal as string);
+  const duration = parseInt(durationVal as string);
+  const totalPoints = parseInt(totalPointsVal as string);
+
+  if (isNaN(courseId)) return { error: 'ID de curso inválido' };
+  if (isNaN(duration)) return { error: 'Duración inválida' };
+  if (isNaN(totalPoints)) return { error: 'Puntos totales inválidos' };
 
   // Combine date and time
   const dateTimeString = `${date}T${time}`;
   const examDate = new Date(dateTimeString);
+
+  if (isNaN(examDate.getTime())) {
+      return { error: 'Fecha u hora inválida' };
+  }
 
   try {
     await prisma.exam.create({
@@ -101,8 +115,9 @@ export async function createExam(formData: FormData) {
         courseId,
         title,
         date: examDate,
-        duration, // minutes or hours? Schema said minutes usually, let's assume minutes or handle effectively
+        duration,
         totalPoints,
+        weight: 1.0, // Default weight
       },
     });
     revalidatePath('/courses');

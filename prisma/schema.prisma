@@ -26,6 +26,7 @@ model User {
   coursesTeaching Course[]  @relation("TeacherCourses")
   enrollments     Enrollment[]
   submissions     Submission[]
+  examResults     ExamResult[]
 }
 
 model Course {
@@ -101,6 +102,19 @@ model Exam {
   date        DateTime
   duration    Int      // minutes
   totalPoints Int
+  weight      Float    @default(1.0)
 
   course      Course   @relation(fields: [courseId], references: [id])
+  results     ExamResult[]
+}
+
+model ExamResult {
+  id        Int      @id @default(autoincrement())
+  examId    Int
+  studentId Int
+  grade     Float
+  feedback  String?
+  
+  exam      Exam     @relation(fields: [examId], references: [id])
+  student   User     @relation(fields: [studentId], references: [id])
 }

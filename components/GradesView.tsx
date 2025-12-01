@@ -1,86 +1,40 @@
+'use client';
+
 import { Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getStudentGrades } from '@/app/actions/data';
+
+interface GradeDetail {
+  type: string;
+  score: number;
+  max: number;
+  weight: number;
+  date: string;
+}
+
+interface CourseGrades {
+  id: number;
+  name: string;
+  code: string;
+  grades: GradeDetail[];
+  average: number;
+  trend: 'up' | 'down' | 'stable';
+}
 
 export function GradesView() {
-  const courses = [
-    {
-      id: 1,
-      name: 'Programación Web',
-      code: 'INF-342',
-      grades: [
-        { type: 'Tarea 1', score: 95, max: 100, weight: 10, date: '10 Oct' },
-        { type: 'Tarea 2', score: 88, max: 100, weight: 10, date: '25 Oct' },
-        { type: 'Parcial 1', score: 92, max: 100, weight: 30, date: '15 Nov' },
-        { type: 'Proyecto', score: 85, max: 100, weight: 20, date: '20 Nov' },
-      ],
-      average: 88,
-      trend: 'up'
-    },
-    {
-      id: 2,
-      name: 'Bases de Datos',
-      code: 'INF-320',
-      grades: [
-        { type: 'Tarea 1', score: 80, max: 100, weight: 10, date: '12 Oct' },
-        { type: 'Laboratorio 1', score: 85, max: 100, weight: 15, date: '20 Oct' },
-        { type: 'Parcial 1', score: 78, max: 100, weight: 30, date: '10 Nov' },
-        { type: 'Proyecto BD', score: 90, max: 100, weight: 25, date: '18 Nov' },
-      ],
-      average: 82,
-      trend: 'up'
-    },
-    {
-      id: 3,
-      name: 'Cálculo II',
-      code: 'MAT-202',
-      grades: [
-        { type: 'Quiz 1', score: 92, max: 100, weight: 5, date: '08 Oct' },
-        { type: 'Quiz 2', score: 88, max: 100, weight: 5, date: '22 Oct' },
-        { type: 'Parcial 1', score: 87, max: 100, weight: 35, date: '05 Nov' },
-        { type: 'Tareas', score: 85, max: 100, weight: 15, date: '15 Nov' },
-      ],
-      average: 87,
-      trend: 'down'
-    },
-    {
-      id: 4,
-      name: 'Ingeniería de Software',
-      code: 'INF-350',
-      grades: [
-        { type: 'Tarea 1', score: 90, max: 100, weight: 10, date: '15 Oct' },
-        { type: 'Exposición', score: 95, max: 100, weight: 20, date: '01 Nov' },
-        { type: 'Proyecto Fase 1', score: 88, max: 100, weight: 20, date: '10 Nov' },
-        { type: 'Documentación', score: 92, max: 100, weight: 15, date: '17 Nov' },
-      ],
-      average: 90,
-      trend: 'up'
-    },
-    {
-      id: 5,
-      name: 'Redes de Computadoras',
-      code: 'INF-330',
-      grades: [
-        { type: 'Laboratorio 1', score: 85, max: 100, weight: 15, date: '18 Oct' },
-        { type: 'Laboratorio 2', score: 80, max: 100, weight: 15, date: '08 Nov' },
-        { type: 'Parcial 1', score: 75, max: 100, weight: 30, date: '12 Nov' },
-      ],
-      average: 78,
-      trend: 'stable'
-    },
-    {
-      id: 6,
-      name: 'Inteligencia Artificial',
-      code: 'INF-380',
-      grades: [
-        { type: 'Tarea 1', score: 88, max: 100, weight: 10, date: '20 Oct' },
-        { type: 'Proyecto ML', score: 92, max: 100, weight: 25, date: '05 Nov' },
-        { type: 'Parcial 1', score: 85, max: 100, weight: 30, date: '14 Nov' },
-      ],
-      average: 87,
-      trend: 'up'
-    },
-  ];
+  const [courses, setCourses] = useState<CourseGrades[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const overallAverage = courses.reduce((sum, course) => sum + course.average, 0) / courses.length;
+  useEffect(() => {
+    getStudentGrades().then((data: any) => {
+      setCourses(data);
+      setIsLoading(false);
+    });
+  }, []);
+
+  const overallAverage = courses.length > 0 
+    ? courses.reduce((sum, course) => sum + course.average, 0) / courses.length 
+    : 0;
 
   const getGradeColor = (score: number, max: number) => {
     const percentage = (score / max) * 100;
@@ -103,6 +57,14 @@ export function GradesView() {
     if (trend === 'down') return <TrendingDown className="w-5 h-5 text-red-600" />;
     return <Minus className="w-5 h-5 text-gray-600" />;
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8">
@@ -143,6 +105,11 @@ export function GradesView() {
 
       {/* Calificaciones por curso */}
       <div className="space-y-6">
+        {courses.length === 0 && (
+           <div className="text-center p-8 bg-white rounded-xl shadow-sm text-gray-500">
+             No tienes calificaciones registradas aún.
+           </div>
+        )}
         {courses.map((course) => (
           <div key={course.id} className="bg-white rounded-xl shadow-md overflow-hidden">
             {/* Header del curso */}
@@ -164,6 +131,7 @@ export function GradesView() {
 
             {/* Tabla de calificaciones */}
             <div className="p-6">
+              {course.grades.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -180,7 +148,7 @@ export function GradesView() {
                       <tr key={index} className="border-b border-[var(--color-border)] last:border-0 hover:bg-gray-50">
                         <td className="py-4 px-4">{grade.type}</td>
                         <td className="py-4 px-4 text-center text-sm text-[var(--color-text-secondary)]">{grade.date}</td>
-                        <td className="py-4 px-4 text-center text-sm">{grade.weight}%</td>
+                        <td className="py-4 px-4 text-center text-sm">{grade.weight.toFixed(0)}%</td>
                         <td className="py-4 px-4 text-center">
                           <span className={`${getGradeColor(grade.score, grade.max)}`}>
                             {grade.score}/{grade.max}
@@ -196,19 +164,22 @@ export function GradesView() {
                   </tbody>
                 </table>
               </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">Sin calificaciones registradas.</div>
+              )}
 
               {/* Barra de progreso del promedio */}
               <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm">Progreso del curso</span>
                   <span className="text-sm">
-                    {course.grades.reduce((sum, g) => sum + g.weight, 0)}% completado
+                    {course.grades.reduce((sum, g) => sum + g.weight, 0).toFixed(0)}% completado
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
                     className="bg-[var(--color-primary)] h-3 rounded-full transition-all"
-                    style={{ width: `${course.grades.reduce((sum, g) => sum + g.weight, 0)}%` }}
+                    style={{ width: `${Math.min(course.grades.reduce((sum, g) => sum + g.weight, 0), 100)}%` }}
                   />
                 </div>
               </div>
