@@ -1,8 +1,10 @@
 'use client';
 
-import { ArrowLeft, FileText, CheckSquare, ClipboardList, Calendar, Download, ExternalLink, Upload } from 'lucide-react';
+import { ArrowLeft, FileText, CheckSquare, ClipboardList, Calendar, Download, ExternalLink, Upload, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getCourseDetails } from '@/app/actions/data';
+import { submitAssignment } from '@/app/actions/student';
+import { getUser } from '@/app/actions/auth';
 
 interface CourseDetailProps {
   courseId: number;
@@ -54,53 +56,98 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  
+  // Submission Modal State
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [submissionUrl, setSubmissionUrl] = useState('');
+  const [submissionContent, setSubmissionContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const fetchData = async () => {
+    const [data, user] = await Promise.all([
+      getCourseDetails(courseId),
+      getUser()
+    ]);
+    
+    if (user) setUserRole(user.role);
+
+    if (data) {
+      setCourse({
+        id: data.id,
+        name: data.name,
+        code: data.code,
+        teacher: data.teacher,
+        color: 'bg-blue-500', // Default color as DB doesn't store it
+      });
+
+      // Map assignments to tasks
+      setTasks(data.assignments.map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        dueDate: new Date(a.dueDate).toLocaleDateString(),
+        status: a.status,
+        points: a.totalPoints,
+        grade: a.submissions[0]?.grade
+      })));
+
+      // Map materials to resources
+      setResources(data.materials.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        type: m.type,
+        size: 'Unknown', // Not in DB
+        date: new Date(m.createdAt).toLocaleDateString(),
+        url: m.url
+      })));
+
+      // Map exams
+      setExams(data.exams.map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        date: new Date(e.date).toLocaleDateString(),
+        time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        duration: `${e.duration} min`,
+        status: 'upcoming', // Logic needed for completed
+        topics: []
+      })));
+    }
+    setIsLoading(false);
+  };
 
   useEffect(() => {
-    getCourseDetails(courseId).then((data: any) => {
-      if (data) {
-        setCourse({
-          id: data.id,
-          name: data.name,
-          code: data.code,
-          teacher: data.teacher,
-          color: 'bg-blue-500', // Default color as DB doesn't store it
-        });
-
-        // Map assignments to tasks
-        setTasks(data.assignments.map((a: any) => ({
-          id: a.id,
-          title: a.title,
-          description: a.description,
-          dueDate: new Date(a.dueDate).toLocaleDateString(),
-          status: a.status,
-          points: a.totalPoints,
-          grade: a.submissions[0]?.grade
-        })));
-
-        // Map materials to resources
-        setResources(data.materials.map((m: any) => ({
-          id: m.id,
-          title: m.title,
-          type: m.type,
-          size: 'Unknown', // Not in DB
-          date: new Date(m.createdAt).toLocaleDateString(),
-          url: m.url
-        })));
-
-        // Map exams
-        setExams(data.exams.map((e: any) => ({
-          id: e.id,
-          title: e.title,
-          date: new Date(e.date).toLocaleDateString(),
-          time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          duration: `${e.duration} min`,
-          status: 'upcoming', // Logic needed for completed
-          topics: []
-        })));
-      }
-      setIsLoading(false);
-    });
+    fetchData();
   }, [courseId]);
+
+  const handleOpenSubmit = (taskId: number) => {
+    setSelectedTaskId(taskId);
+    setShowSubmitModal(true);
+    setSubmissionUrl('');
+    setSubmissionContent('');
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedTaskId) return;
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    formData.append('assignmentId', selectedTaskId.toString());
+    formData.append('fileUrl', submissionUrl);
+    formData.append('content', submissionContent);
+
+    const result = await submitAssignment(formData);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setShowSubmitModal(false);
+      alert('Tarea entregada con éxito');
+      fetchData(); // Refresh data to show updated status
+    } else {
+      alert(result.error || 'Error al entregar la tarea');
+    }
+  };
 
   if (isLoading) {
      return (
@@ -198,6 +245,11 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
                       <span>•</span>
                       <span>{resource.date}</span>
                     </div>
+                    {resource.url && (
+                      <a href={resource.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline mt-1 block truncate">
+                        {resource.url}
+                      </a>
+                    )}
                   </div>
                   <div className="flex gap-2 flex-shrink-0">
                     <button className="p-2 text-[var(--color-primary)] hover:bg-blue-50 rounded-lg transition">
@@ -258,8 +310,11 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
                       )}
                     </div>
 
-                    {task.status === 'pending' && (
-                      <button className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center gap-2">
+                    {task.status === 'pending' && userRole === 'student' && (
+                      <button 
+                        onClick={() => handleOpenSubmit(task.id)}
+                        className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center gap-2"
+                      >
                         <Upload className="w-4 h-4" />
                         Entregar
                       </button>
@@ -324,6 +379,58 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           )}
         </div>
       </div>
+
+      {/* Submission Modal */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full">
+            <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
+              <h3 className="text-[var(--color-primary)] text-lg font-bold m-0">Entregar Tarea</h3>
+              <button onClick={() => setShowSubmitModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600">Sube tu tarea ingresando el enlace a tu archivo (Google Drive, Dropbox, etc.)</p>
+              <div>
+                <label className="block text-sm mb-2 font-medium">Enlace del archivo (URL)</label>
+                <input
+                  type="url"
+                  value={submissionUrl}
+                  onChange={(e) => setSubmissionUrl(e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm mb-2 font-medium">Comentarios (Opcional)</label>
+                <textarea
+                  value={submissionContent}
+                  onChange={(e) => setSubmissionContent(e.target.value)}
+                  placeholder="Comentarios adicionales..."
+                  className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-[var(--color-border)] flex justify-end gap-3">
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !submissionUrl}
+                className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Entregando...' : 'Entregar Tarea'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

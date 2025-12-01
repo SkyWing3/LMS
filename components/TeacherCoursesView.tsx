@@ -3,6 +3,7 @@
 import { BookOpen, Plus, Users, Upload, FileText, ClipboardList } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getTeacherCourses } from '@/app/actions/data';
+import { createResource, createAssignment, createExam } from '@/app/actions/teacher';
 
 interface TeacherCoursesViewProps {
   onSelectCourse: (courseId: number) => void;
@@ -24,18 +25,29 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
   const [contentType, setContentType] = useState<'resource' | 'task' | 'exam' | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form States
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [resourceType, setResourceType] = useState('PDF');
+  const [url, setUrl] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [totalPoints, setTotalPoints] = useState('100');
+  const [examDate, setExamDate] = useState('');
+  const [examTime, setExamTime] = useState('');
+  const [duration, setDuration] = useState('');
 
   useEffect(() => {
     getTeacherCourses().then((data) => {
-      // Map backend data to UI
       const mapped = data.map((c: any) => ({
         id: c.id,
         name: c.name,
         code: c.code,
         students: c.students,
-        pendingGrades: 0, // Not calculated yet
+        pendingGrades: 0,
         schedule: 'Por definir',
-        color: 'bg-blue-500' // Default
+        color: 'bg-blue-500'
       }));
       setCourses(mapped);
       setIsLoading(false);
@@ -46,14 +58,55 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
     setSelectedCourse(courseId);
     setContentType(type);
     setShowAddModal(true);
+    // Reset form
+    setTitle('');
+    setDescription('');
+    setUrl('');
+    setDueDate('');
+    setTotalPoints('100');
+    setExamDate('');
+    setExamTime('');
+    setDuration('');
   };
 
-  const handleSubmitContent = () => {
-    // Aquí iría la lógica para agregar el contenido
-    alert('Funcionalidad de crear contenido en desarrollo');
-    setShowAddModal(false);
-    setSelectedCourse(null);
-    setContentType(null);
+  const handleSubmitContent = async () => {
+    if (!selectedCourse) return;
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    formData.append('courseId', selectedCourse.toString());
+    formData.append('title', title);
+
+    let result;
+
+    if (contentType === 'resource') {
+      formData.append('type', resourceType);
+      formData.append('url', url);
+      formData.append('description', description);
+      result = await createResource(formData);
+    } else if (contentType === 'task') {
+      formData.append('description', description);
+      formData.append('dueDate', dueDate);
+      formData.append('totalPoints', totalPoints);
+      result = await createAssignment(formData);
+    } else if (contentType === 'exam') {
+      formData.append('date', examDate);
+      formData.append('time', examTime);
+      formData.append('duration', duration); // in minutes
+      formData.append('totalPoints', totalPoints);
+      result = await createExam(formData);
+    }
+
+    setIsSubmitting(false);
+
+    if (result?.success) {
+      setShowAddModal(false);
+      setSelectedCourse(null);
+      setContentType(null);
+      alert('Contenido creado exitosamente');
+    } else {
+      alert(result?.error || 'Error al crear contenido');
+    }
   };
 
   if (isLoading) {
@@ -173,30 +226,40 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                     <label className="block text-sm mb-2">Título del Recurso</label>
                     <input
                       type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       placeholder="Ej: Introducción a React"
                     />
                   </div>
                   <div>
                     <label className="block text-sm mb-2">Tipo de Recurso</label>
-                    <select className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
-                      <option>PDF</option>
-                      <option>Video</option>
-                      <option>Enlace Externo</option>
-                      <option>Código</option>
-                      <option>Presentación</option>
+                    <select 
+                      value={resourceType}
+                      onChange={(e) => setResourceType(e.target.value)}
+                      className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    >
+                      <option value="PDF">PDF</option>
+                      <option value="Video">Video</option>
+                      <option value="LINK">Enlace Externo</option>
+                      <option value="CODE">Código</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm mb-2">Archivo o URL</label>
+                    <label className="block text-sm mb-2">Enlace / URL</label>
                     <input
-                      type="file"
+                      type="text"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                      placeholder="https://..."
                     />
                   </div>
                   <div>
-                    <label className="block text-sm mb-2">Descripción</label>
+                    <label className="block text-sm mb-2">Descripción (Opcional)</label>
                     <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       rows={4}
                       placeholder="Describe el contenido del recurso"
@@ -211,6 +274,8 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                     <label className="block text-sm mb-2">Título de la Tarea</label>
                     <input
                       type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       placeholder="Ej: Crear aplicación con React Hooks"
                     />
@@ -218,6 +283,8 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                   <div>
                     <label className="block text-sm mb-2">Descripción</label>
                     <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       rows={5}
                       placeholder="Describe los requerimientos de la tarea"
@@ -228,6 +295,8 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                       <label className="block text-sm mb-2">Fecha Límite</label>
                       <input
                         type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
                         className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </div>
@@ -235,18 +304,12 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                       <label className="block text-sm mb-2">Puntos</label>
                       <input
                         type="number"
+                        value={totalPoints}
+                        onChange={(e) => setTotalPoints(e.target.value)}
                         className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                         placeholder="100"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-2">Archivos Adjuntos (opcional)</label>
-                    <input
-                      type="file"
-                      multiple
-                      className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                    />
                   </div>
                 </>
               )}
@@ -257,23 +320,20 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                     <label className="block text-sm mb-2">Título del Examen</label>
                     <input
                       type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       placeholder="Ej: Examen Parcial - Fundamentos Web"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm mb-2">Descripción</label>
-                    <textarea
-                      className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      rows={4}
-                      placeholder="Temas que abarcará el examen"
-                    />
-                  </div>
+                  
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm mb-2">Fecha</label>
                       <input
                         type="date"
+                        value={examDate}
+                        onChange={(e) => setExamDate(e.target.value)}
                         className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </div>
@@ -281,16 +341,19 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                       <label className="block text-sm mb-2">Hora</label>
                       <input
                         type="time"
+                        value={examTime}
+                        onChange={(e) => setExamTime(e.target.value)}
                         className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm mb-2">Duración (hrs)</label>
+                      <label className="block text-sm mb-2">Duración (min)</label>
                       <input
                         type="number"
-                        step="0.5"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
                         className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                        placeholder="2"
+                        placeholder="90"
                       />
                     </div>
                   </div>
@@ -298,6 +361,8 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
                     <label className="block text-sm mb-2">Puntos Totales</label>
                     <input
                       type="number"
+                      value={totalPoints}
+                      onChange={(e) => setTotalPoints(e.target.value)}
                       className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       placeholder="100"
                     />
@@ -315,12 +380,17 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
               </button>
               <button
                 onClick={handleSubmitContent}
-                className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center gap-2"
+                disabled={isSubmitting}
+                className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center gap-2 disabled:opacity-50"
               >
                 <Plus className="w-5 h-5" />
-                {contentType === 'resource' && 'Agregar Recurso'}
-                {contentType === 'task' && 'Asignar Tarea'}
-                {contentType === 'exam' && 'Crear Examen'}
+                {isSubmitting ? 'Guardando...' : (
+                   <>
+                    {contentType === 'resource' && 'Agregar Recurso'}
+                    {contentType === 'task' && 'Asignar Tarea'}
+                    {contentType === 'exam' && 'Crear Examen'}
+                   </>
+                )}
               </button>
             </div>
           </div>
