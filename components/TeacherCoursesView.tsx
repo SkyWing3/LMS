@@ -1,46 +1,46 @@
 'use client';
 
 import { BookOpen, Plus, Users, Upload, FileText, ClipboardList } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getTeacherCourses } from '@/app/actions/data';
 
 interface TeacherCoursesViewProps {
   onSelectCourse: (courseId: number) => void;
+}
+
+interface Course {
+  id: number;
+  name: string;
+  code: string;
+  students: number;
+  pendingGrades: number;
+  schedule: string;
+  color: string;
 }
 
 export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [contentType, setContentType] = useState<'resource' | 'task' | 'exam' | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const courses = [
-    {
-      id: 1,
-      name: 'Programación Web - Sección A',
-      code: 'INF-342-A',
-      students: 32,
-      pendingGrades: 5,
-      schedule: 'Lun-Mié 10:00-12:00',
-      color: 'bg-blue-500'
-    },
-    {
-      id: 2,
-      name: 'Programación Web - Sección B',
-      code: 'INF-342-B',
-      students: 28,
-      pendingGrades: 3,
-      schedule: 'Mar-Jue 14:00-16:00',
-      color: 'bg-green-500'
-    },
-    {
-      id: 3,
-      name: 'Bases de Datos',
-      code: 'INF-320',
-      students: 25,
-      pendingGrades: 4,
-      schedule: 'Lun-Mié 14:00-16:00',
-      color: 'bg-purple-500'
-    },
-  ];
+  useEffect(() => {
+    getTeacherCourses().then((data) => {
+      // Map backend data to UI
+      const mapped = data.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+        code: c.code,
+        students: c.students,
+        pendingGrades: 0, // Not calculated yet
+        schedule: 'Por definir',
+        color: 'bg-blue-500' // Default
+      }));
+      setCourses(mapped);
+      setIsLoading(false);
+    });
+  }, []);
 
   const handleAddContent = (courseId: number, type: 'resource' | 'task' | 'exam') => {
     setSelectedCourse(courseId);
@@ -50,10 +50,19 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
 
   const handleSubmitContent = () => {
     // Aquí iría la lógica para agregar el contenido
+    alert('Funcionalidad de crear contenido en desarrollo');
     setShowAddModal(false);
     setSelectedCourse(null);
     setContentType(null);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8">

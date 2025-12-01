@@ -2,41 +2,78 @@
 
 import { useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
+import { login } from '@/app/actions/auth';
+
+interface User {
+  email: string;
+  name: string;
+  role: 'student' | 'teacher' | 'admin';
+}
 
 interface LoginPageProps {
-  onLogin: (email: string, password: string, role: 'student' | 'teacher' | 'admin') => void;
+  onLogin: (user: User) => void;
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
     
-    // Simulación de roles basados en email
-    let role: 'student' | 'teacher' | 'admin' = 'student';
-    if (email.includes('docente') || email.includes('teacher')) {
-      role = 'teacher';
-    } else if (email.includes('admin')) {
-      role = 'admin';
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('password', password);
+
+    try {
+      const result = await login(formData);
+      if (result.success && result.user) {
+        onLogin(result.user as User);
+      } else {
+        setError(result.error || 'Error al iniciar sesión');
+      }
+    } catch (err) {
+      setError('Ocurrió un error inesperado');
+    } finally {
+      setIsLoading(false);
     }
-    
-    onLogin(email, password, role);
   };
 
   const handleGoogleLogin = () => {
     // Simulación de login con Google - por defecto estudiante
-    onLogin('estudiante@ucb.edu.bo', '', 'student');
+    // onLogin('estudiante@ucb.edu.bo', '', 'student');
+    alert('Login con Google no implementado en esta versión');
   };
 
-  const handleDemoLogin = (role: 'student' | 'teacher' | 'admin') => {
-    const emails = {
-      student: 'estudiante@ucb.edu.bo',
-      teacher: 'docente@ucb.edu.bo',
-      admin: 'admin@ucb.edu.bo'
+  const handleDemoLogin = async (role: 'student' | 'teacher' | 'admin') => {
+    const credentials = {
+      student: { email: 'student@example.com', password: '123456' },
+      teacher: { email: 'teacher@example.com', password: '123456' },
+      admin:   { email: 'admin@example.com',   password: '123456' }
     };
-    onLogin(emails[role], 'demo123', role);
+    
+    const creds = credentials[role];
+    setEmail(creds.email);
+    setPassword(creds.password);
+    
+    // Auto-submit for demo convenience
+    const formData = new FormData();
+    formData.append('email', creds.email);
+    formData.append('password', creds.password);
+    
+    setIsLoading(true);
+    const result = await login(formData);
+    setIsLoading(false);
+    
+    if (result.success && result.user) {
+      onLogin(result.user as User);
+    } else {
+      setError(result.error || 'Error en login demo');
+    }
   };
 
   return (
@@ -56,6 +93,11 @@ export function LoginPage({ onLogin }: LoginPageProps) {
         {/* Formulario de login */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm text-center">
+                {error}
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="block text-sm mb-2 text-[var(--color-text-secondary)]">
                 Correo Electrónico
@@ -94,10 +136,15 @@ export function LoginPage({ onLogin }: LoginPageProps) {
 
             <button
               type="submit"
-              className="w-full bg-[var(--color-primary)] text-white py-3 rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center justify-center gap-2 shadow-md"
+              disabled={isLoading}
+              className="w-full bg-[var(--color-primary)] text-white py-3 rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center justify-center gap-2 shadow-md disabled:opacity-70"
             >
-              <LogIn className="w-5 h-5" />
-              Iniciar Sesión
+              {isLoading ? 'Cargando...' : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  Iniciar Sesión
+                </>
+              )}
             </button>
           </form>
 
@@ -158,3 +205,4 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     </div>
   );
 }
+

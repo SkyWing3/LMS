@@ -1,94 +1,116 @@
 'use client';
 
 import { ArrowLeft, FileText, CheckSquare, ClipboardList, Calendar, Download, ExternalLink, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getCourseDetails } from '@/app/actions/data';
 
 interface CourseDetailProps {
   courseId: number;
   onBack: () => void;
 }
 
+interface CourseData {
+  id: number;
+  name: string;
+  code: string;
+  teacher: { name: string };
+  color: string;
+}
+
+interface Resource {
+  id: number;
+  title: string;
+  type: string;
+  size: string;
+  date: string;
+  url: string;
+}
+
+interface Task {
+  id: number;
+  title: string;
+  description: string | null;
+  dueDate: string;
+  status: string;
+  points: number;
+  grade?: number | null;
+}
+
+interface Exam {
+  id: number;
+  title: string;
+  date: string;
+  time: string;
+  duration: string;
+  status: string;
+  grade?: number | null;
+  topics: string[];
+}
+
 export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
   const [activeTab, setActiveTab] = useState<'resources' | 'tasks' | 'exams'>('resources');
+  const [course, setCourse] = useState<CourseData | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Datos de ejemplo del curso
-  const courseData = {
-    1: { name: 'Programación Web', code: 'INF-342', teacher: 'Dr. Carlos Méndez', color: 'bg-blue-500' },
-    2: { name: 'Bases de Datos', code: 'INF-320', teacher: 'Dra. María González', color: 'bg-green-500' },
-    3: { name: 'Cálculo II', code: 'MAT-202', teacher: 'Lic. Roberto Fernández', color: 'bg-purple-500' },
-    4: { name: 'Ingeniería de Software', code: 'INF-350', teacher: 'Ing. Ana Morales', color: 'bg-orange-500' },
-    5: { name: 'Redes de Computadoras', code: 'INF-330', teacher: 'Ing. Juan Pérez', color: 'bg-red-500' },
-    6: { name: 'Inteligencia Artificial', code: 'INF-380', teacher: 'Dr. Luis Ramírez', color: 'bg-indigo-500' },
-  };
+  useEffect(() => {
+    getCourseDetails(courseId).then((data: any) => {
+      if (data) {
+        setCourse({
+          id: data.id,
+          name: data.name,
+          code: data.code,
+          teacher: data.teacher,
+          color: 'bg-blue-500', // Default color as DB doesn't store it
+        });
 
-  const course = courseData[courseId as keyof typeof courseData] || courseData[1];
+        // Map assignments to tasks
+        setTasks(data.assignments.map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          description: a.description,
+          dueDate: new Date(a.dueDate).toLocaleDateString(),
+          status: a.status,
+          points: a.totalPoints,
+          grade: a.submissions[0]?.grade
+        })));
 
-  const resources = [
-    { id: 1, title: 'Introducción a HTML y CSS', type: 'PDF', size: '2.5 MB', date: '15 Nov 2025', url: '#' },
-    { id: 2, title: 'JavaScript Fundamentos', type: 'PDF', size: '3.2 MB', date: '10 Nov 2025', url: '#' },
-    { id: 3, title: 'Framework React - Parte 1', type: 'Video', size: '150 MB', date: '08 Nov 2025', url: '#' },
-    { id: 4, title: 'Diseño Responsivo con Flexbox', type: 'PDF', size: '1.8 MB', date: '05 Nov 2025', url: '#' },
-    { id: 5, title: 'API REST y Fetch', type: 'Código', size: '0.5 MB', date: '01 Nov 2025', url: '#' },
-  ];
+        // Map materials to resources
+        setResources(data.materials.map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          type: m.type,
+          size: 'Unknown', // Not in DB
+          date: new Date(m.createdAt).toLocaleDateString(),
+          url: m.url
+        })));
 
-  const tasks = [
-    {
-      id: 1,
-      title: 'Tarea 1: Crear Landing Page Responsiva',
-      description: 'Crear una página de aterrizaje completamente responsiva usando HTML, CSS y JavaScript.',
-      dueDate: '25 Nov 2025',
-      status: 'pending',
-      points: 100
-    },
-    {
-      id: 2,
-      title: 'Tarea 2: Aplicación de Lista de Tareas con React',
-      description: 'Desarrollar una aplicación de gestión de tareas utilizando React y hooks.',
-      dueDate: '05 Dic 2025',
-      status: 'pending',
-      points: 150
-    },
-    {
-      id: 3,
-      title: 'Tarea 3: Formulario con Validación',
-      description: 'Crear un formulario complejo con validación del lado del cliente.',
-      dueDate: '20 Oct 2025',
-      status: 'submitted',
-      grade: 95,
-      points: 100
-    },
-  ];
+        // Map exams
+        setExams(data.exams.map((e: any) => ({
+          id: e.id,
+          title: e.title,
+          date: new Date(e.date).toLocaleDateString(),
+          time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          duration: `${e.duration} min`,
+          status: 'upcoming', // Logic needed for completed
+          topics: []
+        })));
+      }
+      setIsLoading(false);
+    });
+  }, [courseId]);
 
-  const exams = [
-    {
-      id: 1,
-      title: 'Examen Parcial - Fundamentos Web',
-      date: '28 Nov 2025',
-      time: '10:00 AM',
-      duration: '2 horas',
-      status: 'upcoming',
-      topics: ['HTML5', 'CSS3', 'JavaScript ES6', 'DOM Manipulation']
-    },
-    {
-      id: 2,
-      title: 'Examen Final - Proyecto Completo',
-      date: '15 Dic 2025',
-      time: '14:00 PM',
-      duration: '3 horas',
-      status: 'upcoming',
-      topics: ['React', 'APIs', 'Estado y Props', 'Routing', 'Hooks']
-    },
-    {
-      id: 3,
-      title: 'Primer Parcial',
-      date: '15 Oct 2025',
-      time: '10:00 AM',
-      duration: '2 horas',
-      status: 'completed',
-      grade: 87,
-      topics: ['HTML Básico', 'CSS Básico']
-    },
-  ];
+  if (isLoading) {
+     return (
+      <div className="p-6 lg:p-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+  }
+
+  if (!course) return <div>Curso no encontrado</div>;
 
   return (
     <div className="p-6 lg:p-8">
@@ -106,7 +128,7 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-white mb-2">{course.name}</h1>
-              <p className="text-white/90 mb-0">{course.teacher}</p>
+              <p className="text-white/90 mb-0">{course.teacher.name}</p>
             </div>
             <span className="px-3 py-1 bg-white/20 rounded-lg">{course.code}</span>
           </div>
@@ -158,6 +180,7 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           {activeTab === 'resources' && (
             <div className="space-y-4">
               <h3 className="text-[var(--color-primary)] mb-4">Material del Curso</h3>
+              {resources.length === 0 && <p className="text-gray-500">No hay recursos disponibles.</p>}
               {resources.map((resource) => (
                 <div
                   key={resource.id}
@@ -193,6 +216,7 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           {activeTab === 'tasks' && (
             <div className="space-y-4">
               <h3 className="text-[var(--color-primary)] mb-4">Tareas Asignadas</h3>
+              {tasks.length === 0 && <p className="text-gray-500">No hay tareas asignadas.</p>}
               {tasks.map((task) => (
                 <div
                   key={task.id}
@@ -250,6 +274,7 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           {activeTab === 'exams' && (
             <div className="space-y-4">
               <h3 className="text-[var(--color-primary)] mb-4">Exámenes</h3>
+              {exams.length === 0 && <p className="text-gray-500">No hay exámenes programados.</p>}
               {exams.map((exam) => (
                 <div
                   key={exam.id}

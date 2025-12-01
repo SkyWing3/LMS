@@ -11,7 +11,8 @@ type SidebarView =
   | 'admin-panel'
   | 'grades'
   | 'profile'
-  | 'settings';
+  | 'settings'
+  | 'course-detail';
 
 type SidebarRole = 'student' | 'teacher' | 'admin';
 

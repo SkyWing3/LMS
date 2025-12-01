@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { BookOpen, Users, Clock, Calendar } from 'lucide-react';
+import { getStudentCourses } from '@/app/actions/data';
 
 interface Course {
   id: number;
@@ -16,68 +18,27 @@ interface CoursesViewProps {
 }
 
 export function CoursesView({ onSelectCourse }: CoursesViewProps) {
-  const courses: Course[] = [
-    {
-      id: 1,
-      name: 'Programación Web',
-      code: 'INF-342',
-      teacher: 'Dr. Carlos Méndez',
-      schedule: 'Lun-Mié 10:00-12:00',
-      students: 32,
-      progress: 75,
-      color: 'bg-blue-500'
-    },
-    {
-      id: 2,
-      name: 'Bases de Datos',
-      code: 'INF-320',
-      teacher: 'Dra. María González',
-      schedule: 'Mar-Jue 14:00-16:00',
-      students: 28,
-      progress: 65,
-      color: 'bg-green-500'
-    },
-    {
-      id: 3,
-      name: 'Cálculo II',
-      code: 'MAT-202',
-      teacher: 'Lic. Roberto Fernández',
-      schedule: 'Lun-Mié-Vie 08:00-09:00',
-      students: 45,
-      progress: 70,
-      color: 'bg-purple-500'
-    },
-    {
-      id: 4,
-      name: 'Ingeniería de Software',
-      code: 'INF-350',
-      teacher: 'Ing. Ana Morales',
-      schedule: 'Mar-Jue 16:00-18:00',
-      students: 30,
-      progress: 80,
-      color: 'bg-orange-500'
-    },
-    {
-      id: 5,
-      name: 'Redes de Computadoras',
-      code: 'INF-330',
-      teacher: 'Ing. Juan Pérez',
-      schedule: 'Lun-Mié 14:00-16:00',
-      students: 25,
-      progress: 60,
-      color: 'bg-red-500'
-    },
-    {
-      id: 6,
-      name: 'Inteligencia Artificial',
-      code: 'INF-380',
-      teacher: 'Dr. Luis Ramírez',
-      schedule: 'Vie 10:00-14:00',
-      students: 20,
-      progress: 55,
-      color: 'bg-indigo-500'
-    },
-  ];
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getStudentCourses()
+      .then((data) => {
+        // Map server data to UI format if necessary, but the action should return matching shape
+        // The action returns { id, name, code, teacher, schedule, students, progress, color }
+        setCourses(data as Course[]);
+      })
+      .catch((err) => console.error(err))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8 flex justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8">
@@ -149,3 +110,4 @@ export function CoursesView({ onSelectCourse }: CoursesViewProps) {
     </div>
   );
 }
+

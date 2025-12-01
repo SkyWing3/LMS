@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminPanel } from '@/components/AdminPanel';
 import { CourseDetail } from '@/components/CourseDetail';
 import { CoursesView } from '@/components/CoursesView';
@@ -11,6 +11,7 @@ import { ProfileView } from '@/components/ProfileView';
 import { SettingsView } from '@/components/SettingsView';
 import { Sidebar } from '@/components/Sidebar';
 import { TeacherCoursesView } from '@/components/TeacherCoursesView';
+import { getUser, logout } from '@/app/actions/auth';
 
 type UserRole = 'student' | 'teacher' | 'admin';
 type View =
@@ -34,25 +35,34 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
 
-  const handleLogin = (email: string, password: string, role: UserRole) => {
-    const names = {
-      student: 'Juan Carlos Pérez',
-      teacher: 'Carlos Méndez',
-      admin: 'Roberto Administrador',
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const sessionUser = await getUser();
+        if (sessionUser) {
+          setUser(sessionUser as User);
+          setIsLoggedIn(true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch session', error);
+      } finally {
+        setIsLoadingSession(false);
+      }
     };
+    checkSession();
+  }, []);
 
-    setUser({
-      email,
-      name: names[role],
-      role,
-    });
+  const handleLogin = (userData: User) => {
+    setUser(userData);
     setIsLoggedIn(true);
     setCurrentView('dashboard');
     setSelectedCourseId(null);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
     setIsLoggedIn(false);
     setUser(null);
     setCurrentView('dashboard');
@@ -93,6 +103,14 @@ export default function Home() {
       setCurrentView('courses');
     }
   };
+
+  if (isLoadingSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+      </div>
+    );
+  }
 
   if (!isLoggedIn || !user) {
     return <LoginPage onLogin={handleLogin} />;
@@ -138,3 +156,4 @@ export default function Home() {
     </div>
   );
 }
+
