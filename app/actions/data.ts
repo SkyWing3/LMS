@@ -94,7 +94,7 @@ export async function getStudentGrades() {
     // Process exams
     e.course.exams.forEach(ex => {
       const result = ex.results[0];
-      if (result) {
+      if (result && result.grade !== null) {
         const score = result.grade;
         const max = ex.totalPoints;
         const weight = ex.weight;
@@ -169,7 +169,13 @@ export async function getCourseDetails(courseId: number) {
           }
         }
       },
-      exams: true,
+      exams: {
+        include: {
+          results: {
+            where: { studentId: session.user.id }
+          }
+        }
+      },
       materials: true
     }
   });

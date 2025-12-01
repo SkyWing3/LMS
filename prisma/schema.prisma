@@ -106,15 +106,52 @@ model Exam {
 
   course      Course   @relation(fields: [courseId], references: [id])
   results     ExamResult[]
+  questions   Question[]
+}
+
+model Question {
+  id          Int      @id @default(autoincrement())
+  examId      Int
+  text        String
+  type        String   // 'MULTIPLE_CHOICE', 'OPEN'
+  points      Int
+  
+  exam        Exam     @relation(fields: [examId], references: [id])
+  options     QuestionOption[]
+  answers     StudentAnswer[]
+}
+
+model QuestionOption {
+  id          Int      @id @default(autoincrement())
+  questionId  Int
+  text        String
+  isCorrect   Boolean  @default(false)
+  
+  question    Question @relation(fields: [questionId], references: [id])
+  answers     StudentAnswer[]
 }
 
 model ExamResult {
   id        Int      @id @default(autoincrement())
   examId    Int
   studentId Int
-  grade     Float
+  grade     Float?
+  status    String   @default("submitted") // submitted, graded
   feedback  String?
   
   exam      Exam     @relation(fields: [examId], references: [id])
   student   User     @relation(fields: [studentId], references: [id])
+  answers   StudentAnswer[]
+}
+
+model StudentAnswer {
+  id           Int      @id @default(autoincrement())
+  examResultId Int
+  questionId   Int
+  text         String?  // For OPEN questions
+  optionId     Int?     // For MULTIPLE_CHOICE questions
+  
+  examResult   ExamResult     @relation(fields: [examResultId], references: [id])
+  question     Question       @relation(fields: [questionId], references: [id])
+  option       QuestionOption? @relation(fields: [optionId], references: [id])
 }

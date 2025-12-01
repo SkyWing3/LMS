@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
+// Resource and Assignment creation remain the same, simplifying for brevity if not changing
 export async function createResource(formData: FormData) {
   const session = await getSession();
   if (!session || session.user.role !== 'teacher') {
@@ -13,7 +14,7 @@ export async function createResource(formData: FormData) {
   const courseId = parseInt(formData.get('courseId') as string);
   const title = formData.get('title') as string;
   const type = formData.get('type') as string;
-  const url = formData.get('url') as string; // Assuming URL input for now
+  const url = formData.get('url') as string;
   const description = formData.get('description') as string;
 
   if (!courseId || !title || !type || !url) {
@@ -22,15 +23,9 @@ export async function createResource(formData: FormData) {
 
   try {
     await prisma.material.create({
-      data: {
-        courseId,
-        title,
-        type,
-        url,
-        // description is not in schema for Material, ignoring for now or check schema
-      },
+      data: { courseId, title, type, url },
     });
-    revalidatePath('/courses'); // Revalidate necessary paths
+    revalidatePath('/courses');
     return { success: true };
   } catch (error) {
     console.error('Error creating resource:', error);
@@ -62,7 +57,7 @@ export async function createAssignment(formData: FormData) {
         description,
         dueDate: new Date(dueDate),
         totalPoints,
-        weight: 1.0, // Default weight
+        weight: 1.0,
       },
     });
     revalidatePath('/courses');
@@ -73,57 +68,150 @@ export async function createAssignment(formData: FormData) {
   }
 }
 
-export async function createExam(formData: FormData) {
+// UPDATED: Complex Exam Creation
+export async function createExamWithQuestions(data: any) {
   const session = await getSession();
   if (!session || session.user.role !== 'teacher') {
     return { error: 'No autorizado' };
   }
 
-  const courseIdVal = formData.get('courseId');
-  const title = formData.get('title') as string;
-  const date = formData.get('date') as string;
-  const time = formData.get('time') as string;
-  const durationVal = formData.get('duration');
-  const totalPointsVal = formData.get('totalPoints');
+  const { courseId, title, date, time, duration, totalPoints, questions } = data;
 
-  if (!courseIdVal) return { error: 'Falta el ID del curso' };
-  if (!title) return { error: 'Falta el título' };
-  if (!date) return { error: 'Falta la fecha' };
-  if (!time) return { error: 'Falta la hora' };
-  if (!durationVal) return { error: 'Falta la duración' };
-  if (!totalPointsVal) return { error: 'Faltan los puntos totales' };
+  if (!courseId || !title || !date || !time || !duration || !totalPoints || !questions) {
+    return { error: 'Faltan campos requeridos' };
+  }
 
-  const courseId = parseInt(courseIdVal as string);
-  const duration = parseInt(durationVal as string);
-  const totalPoints = parseInt(totalPointsVal as string);
-
-  if (isNaN(courseId)) return { error: 'ID de curso inválido' };
-  if (isNaN(duration)) return { error: 'Duración inválida' };
-  if (isNaN(totalPoints)) return { error: 'Puntos totales inválidos' };
-
-  // Combine date and time
   const dateTimeString = `${date}T${time}`;
   const examDate = new Date(dateTimeString);
 
-  if (isNaN(examDate.getTime())) {
-      return { error: 'Fecha u hora inválida' };
-  }
-
   try {
-    await prisma.exam.create({
-      data: {
-        courseId,
-        title,
-        date: examDate,
-        duration,
-        totalPoints,
-        weight: 1.0, // Default weight
-      },
+    await prisma.$transaction(async (tx) => {
+      // 1. Create Exam
+      const exam = await tx.exam.create({
+        data: {
+          courseId: parseInt(courseId),
+          title,
+          date: examDate,
+          duration: parseInt(duration),
+          totalPoints: parseInt(totalPoints),
+        },
+      });
+
+      // 2. Create Questions
+      for (const q of questions) {
+        const question = await tx.question.create({
+          data: {
+            examId: exam.id,
+            text: q.text,
+            type: q.type,
+            points: parseInt(q.points),
+          },
+        });
+
+        // 3. Create Options if Multiple Choice
+        if (q.type === 'MULTIPLE_CHOICE' && q.options) {
+          for (const opt of q.options) {
+            await tx.questionOption.create({
+              data: {
+                questionId: question.id,
+                text: opt.text,
+                isCorrect: opt.isCorrect,
+              },
+            });
+          }
+        }
+      }
     });
+
     revalidatePath('/courses');
     return { success: true };
   } catch (error) {
-    console.error('Error creating exam:', error);
-    return { error: 'Error al crear el examen' };
+    console.error('Error creating exam with questions:', error);
+    return { error: 'Error al crear el examen completo' };
   }
+}
+
+// NEW: Grading Actions
+export async function getCourseSubmissions(courseId: number) {
+    const session = await getSession();
+    if (!session || session.user.role !== 'teacher') return null;
+  
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        assignments: {
+          include: {
+            submissions: { include: { student: true } }
+          }
+        },
+        exams: {
+          include: {
+            results: { include: { student: true } }
+          }
+        }
+      }
+    });
+    return course;
+  }
+
+  export async function getExamSubmissionDetail(examResultId: number) {
+    const session = await getSession();
+    if (!session || session.user.role !== 'teacher') return null;
+
+    return prisma.examResult.findUnique({
+        where: { id: examResultId },
+        include: {
+            student: true,
+            exam: {
+                include: {
+                    questions: {
+                        include: {
+                            options: true
+                        }
+                    }
+                }
+            },
+            answers: true
+        }
+    });
+}
+
+export async function gradeExamSubmission(resultId: number, grade: number, feedback: string) {
+    const session = await getSession();
+    if (!session || session.user.role !== 'teacher') return { error: 'Unauthorized' };
+
+    try {
+        await prisma.examResult.update({
+            where: { id: resultId },
+            data: {
+                grade,
+                feedback,
+                status: 'graded'
+            }
+        });
+        revalidatePath('/courses'); // simplified revalidation
+        return { success: true };
+    } catch (e) {
+        return { error: 'Error grading exam' };
+    }
+}
+
+export async function gradeAssignmentSubmission(submissionId: number, grade: number, feedback: string) {
+    const session = await getSession();
+    if (!session || session.user.role !== 'teacher') return { error: 'Unauthorized' };
+
+    try {
+        await prisma.submission.update({
+            where: { id: submissionId },
+            data: {
+                grade,
+                feedback,
+                status: 'graded'
+            }
+        });
+        revalidatePath('/courses');
+        return { success: true };
+    } catch (e) {
+        return { error: 'Error grading assignment' };
+    }
 }

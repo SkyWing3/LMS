@@ -58,3 +58,61 @@ export async function submitAssignment(formData: FormData) {
     return { error: 'Error al entregar la tarea' };
   }
 }
+
+// NEW: Student Exam Actions
+export async function getExamDetailsForStudent(examId: number) {
+    const session = await getSession();
+    if (!session || session.user.role !== 'student') return null;
+
+    return prisma.exam.findUnique({
+        where: { id: examId },
+        include: {
+            questions: {
+                include: {
+                    options: {
+                        select: { id: true, text: true } // Hide isCorrect
+                    }
+                }
+            }
+        }
+    });
+}
+
+export async function submitExam(examId: number, answers: any[]) {
+    const session = await getSession();
+    if (!session || session.user.role !== 'student') return { error: 'Unauthorized' };
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            // 1. Create Result
+            const result = await tx.examResult.create({
+                data: {
+                    examId,
+                    studentId: session.user.id,
+                    status: 'submitted',
+                    grade: 0 // Placeholder, will update after auto-grading or manual
+                }
+            });
+
+            // 2. Save Answers
+            for (const ans of answers) {
+                await tx.studentAnswer.create({
+                    data: {
+                        examResultId: result.id,
+                        questionId: ans.questionId,
+                        text: ans.text || null, // For Open
+                        optionId: ans.optionId || null // For MC
+                    }
+                });
+            }
+            
+            // Optional: Auto-grade MC questions here if desired
+        });
+
+        revalidatePath('/courses');
+        return { success: true };
+    } catch (error) {
+        console.error("Error submitting exam", error);
+        return { error: 'Failed to submit exam' };
+    }
+}
