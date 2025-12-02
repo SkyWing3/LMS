@@ -1,4 +1,6 @@
 import { Calendar, BookOpen, Award, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getDashboardStats, getRecentActivity, getUpcomingEvents, getStudentCourses } from '@/app/actions/data';
 
 interface DashboardProps {
   userRole: 'student' | 'teacher' | 'admin';
@@ -6,6 +8,12 @@ interface DashboardProps {
 }
 
 export function Dashboard({ userRole, userName }: DashboardProps) {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [activity, setActivity] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [studentCourses, setStudentCourses] = useState<any[]>([]);
+
   const currentDate = new Date().toLocaleDateString('es-ES', {
     weekday: 'long',
     year: 'numeric',
@@ -13,60 +21,39 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
     day: 'numeric'
   });
 
-  // Datos de ejemplo para estudiante
-  const studentData = {
-    period: '2025-1',
-    enrolledCourses: 6,
-    averageGrade: 85,
-    pendingTasks: 4,
-    upcomingExams: 2,
-    recentActivities: [
-      { id: 1, course: 'Programación Web', activity: 'Tarea enviada: "Diseño Responsivo"', date: '20 Nov', type: 'task' },
-      { id: 2, course: 'Bases de Datos', activity: 'Nueva tarea asignada: "Normalización"', date: '19 Nov', type: 'assignment' },
-      { id: 3, course: 'Cálculo II', activity: 'Calificación publicada: Examen Parcial (87/100)', date: '18 Nov', type: 'grade' },
-      { id: 4, course: 'Ingeniería de Software', activity: 'Nuevo recurso: "Metodologías Ágiles.pdf"', date: '17 Nov', type: 'resource' },
-    ],
-    upcomingEvents: [
-      { id: 1, title: 'Examen Parcial - Bases de Datos', date: '25 Nov', time: '10:00 AM' },
-      { id: 2, title: 'Entrega Proyecto - Programación Web', date: '27 Nov', time: '23:59 PM' },
-      { id: 3, title: 'Exposición - Ingeniería de Software', date: '30 Nov', time: '14:00 PM' },
-    ],
-    courses: [
-      { id: 1, name: 'Programación Web', progress: 75, grade: 88 },
-      { id: 2, name: 'Bases de Datos', progress: 65, grade: 82 },
-      { id: 3, name: 'Cálculo II', progress: 70, grade: 87 },
-      { id: 4, name: 'Ingeniería de Software', progress: 80, grade: 90 },
-    ]
-  };
+  useEffect(() => {
+    async function fetchData() {
+        try {
+            const [statsData, activityData, eventsData] = await Promise.all([
+                getDashboardStats(),
+                getRecentActivity(),
+                getUpcomingEvents()
+            ]);
+            
+            setStats(statsData);
+            setActivity(activityData);
+            setEvents(eventsData);
 
-  const teacherData = {
-    period: '2025-1',
-    teachingCourses: 3,
-    totalStudents: 85,
-    pendingGrades: 12,
-    recentActivities: [
-      { id: 1, course: 'Programación Web - Sección A', activity: '15 estudiantes entregaron tarea', date: '20 Nov' },
-      { id: 2, course: 'Programación Web - Sección B', activity: 'Nuevo recurso publicado', date: '19 Nov' },
-      { id: 3, course: 'Bases de Datos', activity: 'Examen creado para el 25 de Nov', date: '18 Nov' },
-    ],
-    courses: [
-      { id: 1, name: 'Programación Web - Sección A', students: 32, pendingTasks: 5 },
-      { id: 2, name: 'Programación Web - Sección B', students: 28, pendingTasks: 3 },
-      { id: 3, name: 'Bases de Datos', students: 25, pendingTasks: 4 },
-    ]
-  };
+            if (userRole === 'student') {
+                const courses = await getStudentCourses();
+                setStudentCourses(courses);
+            }
+        } catch (error) {
+            console.error("Error fetching dashboard data:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+    fetchData();
+  }, [userRole]);
 
-  const adminData = {
-    period: '2025-1',
-    totalStudents: 1250,
-    totalTeachers: 85,
-    totalCourses: 120,
-    recentActivities: [
-      { id: 1, activity: 'Nuevo docente registrado: Dr. Juan Pérez', date: '20 Nov' },
-      { id: 2, activity: '35 estudiantes matriculados en nuevos cursos', date: '19 Nov' },
-      { id: 3, activity: 'Curso "Machine Learning" creado', date: '18 Nov' },
-    ]
-  };
+  if (loading) {
+    return (
+        <div className="p-6 lg:p-8 flex items-center justify-center min-h-[200px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+        </div>
+    );
+  }
 
   if (userRole === 'student') {
     return (
@@ -82,9 +69,9 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
           <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-[var(--color-primary)]">
             <div className="flex items-center justify-between mb-2">
               <BookOpen className="w-8 h-8 text-[var(--color-primary)]" />
-              <span className="text-[var(--color-text-secondary)] text-sm">Periodo {studentData.period}</span>
+              <span className="text-[var(--color-text-secondary)] text-sm">Periodo 2025-1</span>
             </div>
-            <h3 className="text-[var(--color-primary)] mb-0">{studentData.enrolledCourses}</h3>
+            <h3 className="text-[var(--color-primary)] mb-0">{stats?.activeCourses || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Cursos Inscritos</p>
           </div>
 
@@ -93,7 +80,7 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
               <TrendingUp className="w-8 h-8 text-[var(--color-success)]" />
               <Award className="w-6 h-6 text-[var(--color-success)]" />
             </div>
-            <h3 className="text-[var(--color-success)] mb-0">{studentData.averageGrade}</h3>
+            <h3 className="text-[var(--color-success)] mb-0">{stats?.averageGrade || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Promedio General</p>
           </div>
 
@@ -102,7 +89,7 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
               <Clock className="w-8 h-8 text-[var(--color-secondary)]" />
               <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded text-xs">Pendientes</span>
             </div>
-            <h3 className="text-[var(--color-secondary)] mb-0">{studentData.pendingTasks}</h3>
+            <h3 className="text-[var(--color-secondary)] mb-0">{stats?.pendingTasks || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Tareas Pendientes</p>
           </div>
 
@@ -111,7 +98,7 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
               <AlertCircle className="w-8 h-8 text-[var(--color-danger)]" />
               <Calendar className="w-6 h-6 text-[var(--color-danger)]" />
             </div>
-            <h3 className="text-[var(--color-danger)] mb-0">{studentData.upcomingExams}</h3>
+            <h3 className="text-[var(--color-danger)] mb-0">{stats?.upcomingExams || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Exámenes Próximos</p>
           </div>
         </div>
@@ -120,68 +107,81 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
           {/* Actividades recientes */}
           <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
             <h3 className="text-[var(--color-primary)] mb-4">Actividad Reciente</h3>
-            <div className="space-y-4">
-              {studentData.recentActivities.map((activity) => (
-                <div key={activity.id} className="flex gap-4 pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    activity.type === 'task' ? 'bg-green-100' :
-                    activity.type === 'assignment' ? 'bg-orange-100' :
-                    activity.type === 'grade' ? 'bg-blue-100' : 'bg-purple-100'
-                  }`}>
-                    {activity.type === 'task' && <Clock className="w-5 h-5 text-green-600" />}
-                    {activity.type === 'assignment' && <BookOpen className="w-5 h-5 text-orange-600" />}
-                    {activity.type === 'grade' && <Award className="w-5 h-5 text-blue-600" />}
-                    {activity.type === 'resource' && <BookOpen className="w-5 h-5 text-purple-600" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="mb-1 truncate">{activity.course}</p>
-                    <p className="text-sm text-[var(--color-text-secondary)] mb-0">{activity.activity}</p>
-                  </div>
-                  <span className="text-xs text-[var(--color-text-secondary)] flex-shrink-0">{activity.date}</span>
+            {activity.length === 0 ? (
+                <p className="text-[var(--color-text-secondary)]">No hay actividad reciente.</p>
+            ) : (
+                <div className="space-y-4">
+                {activity.map((item) => (
+                    <div key={item.id} className="flex gap-4 pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        item.type === 'task' ? 'bg-green-100' :
+                        item.type === 'assignment' ? 'bg-orange-100' :
+                        item.type === 'grade' ? 'bg-blue-100' : 'bg-purple-100'
+                    }`}>
+                        {item.type === 'task' && <Clock className="w-5 h-5 text-green-600" />}
+                        {item.type === 'submission' && <BookOpen className="w-5 h-5 text-orange-600" />}
+                        {item.type === 'grade' && <Award className="w-5 h-5 text-blue-600" />}
+                        {item.type === 'material' && <BookOpen className="w-5 h-5 text-purple-600" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="mb-1 truncate">{item.course}</p>
+                        <p className="text-sm text-[var(--color-text-secondary)] mb-0">{item.description}</p>
+                    </div>
+                    <span className="text-xs text-[var(--color-text-secondary)] flex-shrink-0">
+                        {new Date(item.time).toLocaleDateString()}
+                    </span>
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            )}
           </div>
 
           {/* Próximos eventos */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="text-[var(--color-primary)] mb-4">Próximos Eventos</h3>
-            <div className="space-y-4">
-              {studentData.upcomingEvents.map((event) => (
-                <div key={event.id} className="p-4 bg-blue-50 rounded-lg border-l-4 border-[var(--color-primary)]">
-                  <p className="mb-2">{event.title}</p>
-                  <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
-                    <Calendar className="w-4 h-4" />
-                    <span>{event.date}</span>
-                    <span>•</span>
-                    <span>{event.time}</span>
-                  </div>
+            {events.length === 0 ? (
+                <p className="text-[var(--color-text-secondary)]">No hay eventos próximos.</p>
+            ) : (
+                <div className="space-y-4">
+                {events.map((event) => (
+                    <div key={event.id} className="p-4 bg-blue-50 rounded-lg border-l-4 border-[var(--color-primary)]">
+                    <p className="mb-2">{event.title}</p>
+                    <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(event.date).toLocaleDateString()}</span>
+                        <span>•</span>
+                        <span>{new Date(event.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            )}
           </div>
         </div>
 
         {/* Progreso de cursos */}
         <div className="mt-6 bg-white rounded-xl shadow-md p-6">
           <h3 className="text-[var(--color-primary)] mb-4">Progreso de Cursos</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {studentData.courses.map((course) => (
-              <div key={course.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="mb-0">{course.name}</p>
-                  <span className="text-sm text-[var(--color-text-secondary)]">{course.progress}%</span>
+          {studentCourses.length === 0 ? (
+             <p className="text-[var(--color-text-secondary)]">No estás inscrito en ningún curso.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {studentCourses.map((course) => (
+                <div key={course.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                    <p className="mb-0">{course.name}</p>
+                    <span className="text-sm text-[var(--color-text-secondary)]">{course.progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                        className="bg-[var(--color-primary)] h-2 rounded-full transition-all"
+                        style={{ width: `${course.progress}%` }}
+                    />
+                    </div>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-[var(--color-primary)] h-2 rounded-full transition-all"
-                    style={{ width: `${course.progress}%` }}
-                  />
-                </div>
-                <p className="text-sm text-[var(--color-text-secondary)] mb-0">Calificación actual: {course.grade}</p>
-              </div>
-            ))}
-          </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -200,7 +200,7 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
             <div className="flex items-center justify-between mb-2">
               <BookOpen className="w-8 h-8 text-green-600" />
             </div>
-            <h3 className="text-green-600 mb-0">{teacherData.teachingCourses}</h3>
+            <h3 className="text-green-600 mb-0">{stats?.activeCourses || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Cursos Dictando</p>
           </div>
 
@@ -208,7 +208,7 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
             <div className="flex items-center justify-between mb-2">
               <BookOpen className="w-8 h-8 text-blue-600" />
             </div>
-            <h3 className="text-blue-600 mb-0">{teacherData.totalStudents}</h3>
+            <h3 className="text-blue-600 mb-0">{stats?.totalStudents || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Estudiantes Totales</p>
           </div>
 
@@ -216,13 +216,13 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
             <div className="flex items-center justify-between mb-2">
               <Award className="w-8 h-8 text-orange-600" />
             </div>
-            <h3 className="text-orange-600 mb-0">{teacherData.pendingGrades}</h3>
+            <h3 className="text-orange-600 mb-0">{stats?.pendingGrades || 0}</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-0">Calificaciones Pendientes</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
+          {/* <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="text-[var(--color-primary)] mb-4">Mis Cursos</h3>
             <div className="space-y-4">
               {teacherData.courses.map((course) => (
@@ -235,19 +235,25 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
                 </div>
               ))}
             </div>
-          </div>
+          </div> */}
 
-          <div className="bg-white rounded-xl shadow-md p-6">
+          <div className="bg-white rounded-xl shadow-md p-6 lg:col-span-2">
             <h3 className="text-[var(--color-primary)] mb-4">Actividad Reciente</h3>
-            <div className="space-y-4">
-              {teacherData.recentActivities.map((activity) => (
-                <div key={activity.id} className="pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0">
-                  <p className="mb-1">{activity.course}</p>
-                  <p className="text-sm text-[var(--color-text-secondary)] mb-0">{activity.activity}</p>
-                  <span className="text-xs text-[var(--color-text-secondary)]">{activity.date}</span>
+            {activity.length === 0 ? (
+                <p className="text-[var(--color-text-secondary)]">No hay actividad reciente.</p>
+            ) : (
+                <div className="space-y-4">
+                {activity.map((item) => (
+                    <div key={item.id} className="pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0">
+                    <p className="mb-1">{item.course}</p>
+                    <p className="text-sm text-[var(--color-text-secondary)] mb-0">{item.description}</p>
+                    <span className="text-xs text-[var(--color-text-secondary)]">
+                        {new Date(item.time).toLocaleDateString()}
+                    </span>
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -264,31 +270,37 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-500">
-          <h3 className="text-purple-600 mb-0">{adminData.totalStudents}</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Estudiantes Totales</p>
+          <h3 className="text-purple-600 mb-0">{stats?.totalUsers || 0}</h3>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Usuarios Totales</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
-          <h3 className="text-green-600 mb-0">{adminData.totalTeachers}</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Docentes</p>
+          <h3 className="text-green-600 mb-0">{stats?.activeSessions || 0}</h3>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Sesiones Activas</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
-          <h3 className="text-blue-600 mb-0">{adminData.totalCourses}</h3>
+          <h3 className="text-blue-600 mb-0">{stats?.totalCourses || 0}</h3>
           <p className="text-sm text-[var(--color-text-secondary)] mb-0">Cursos Activos</p>
         </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6">
         <h3 className="text-[var(--color-primary)] mb-4">Actividad Reciente del Sistema</h3>
-        <div className="space-y-4">
-          {adminData.recentActivities.map((activity) => (
-            <div key={activity.id} className="pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0">
-              <p className="mb-1">{activity.activity}</p>
-              <span className="text-xs text-[var(--color-text-secondary)]">{activity.date}</span>
+        {activity.length === 0 ? (
+             <p className="text-[var(--color-text-secondary)]">No hay actividad reciente.</p>
+        ) : (
+            <div className="space-y-4">
+            {activity.map((item) => (
+                <div key={item.id} className="pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0">
+                <p className="mb-1">{item.description}</p>
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                    {new Date(item.time).toLocaleDateString()}
+                </span>
+                </div>
+            ))}
             </div>
-          ))}
-        </div>
+        )}
       </div>
     </div>
   );
