@@ -1,4 +1,8 @@
-import { User, Mail, Phone, MapPin, Calendar, GraduationCap, Edit2, Camera } from 'lucide-react';
+'use client';
+
+import { User, Mail, Phone, MapPin, GraduationCap, Edit2, Camera, Save, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getUserProfile, updateUserProfile } from '@/app/actions/user';
 
 interface ProfileViewProps {
   userRole: 'student' | 'teacher' | 'admin';
@@ -6,52 +10,84 @@ interface ProfileViewProps {
   userEmail: string;
 }
 
-export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps) {
+export function ProfileView({ userRole }: ProfileViewProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    currentPassword: '',
+    newPassword: ''
+  });
+
   const roleLabels = {
     student: 'Estudiante',
     teacher: 'Docente',
     admin: 'Administrador'
   };
 
-  // Datos de ejemplo según el rol
-  const studentProfile = {
-    fullName: userName,
-    email: userEmail,
-    phone: '+591 7654-3210',
-    address: 'Cochabamba, Bolivia',
-    studentId: '2021-00123',
-    career: 'Ingeniería en Sistemas',
-    enrollmentDate: 'Marzo 2021',
-    currentSemester: '8vo Semestre',
-    academicStatus: 'Regular',
-    credits: 168,
-    totalCredits: 240,
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const data = await getUserProfile();
+        if (data) {
+          setProfile(data);
+          setFormData(prev => ({
+            ...prev,
+            name: data.name,
+            email: data.email,
+            phone: data.phone || '',
+            address: data.address || ''
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProfile();
+  }, []);
+
+  const handleSave = async () => {
+    try {
+      const result = await updateUserProfile({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        currentPassword: formData.currentPassword || undefined,
+        newPassword: formData.newPassword || undefined
+      });
+
+      if (result.success) {
+        setIsEditing(false);
+        // Reload profile to get fresh data
+        const data = await getUserProfile();
+        if (data) {
+            setProfile(data);
+            // Reset password fields
+            setFormData(prev => ({
+                ...prev,
+                currentPassword: '',
+                newPassword: ''
+            }));
+        }
+        alert('Perfil actualizado correctamente');
+      } else {
+        alert(result.error || 'Error al actualizar perfil');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      alert('Error al guardar los cambios');
+    }
   };
 
-  const teacherProfile = {
-    fullName: userName,
-    email: userEmail,
-    phone: '+591 7123-4567',
-    address: 'Cochabamba, Bolivia',
-    employeeId: 'DOC-2018-045',
-    department: 'Departamento de Informática',
-    specialization: 'Desarrollo Web y Bases de Datos',
-    hireDate: 'Enero 2018',
-    courseLoad: 3,
-  };
-
-  const adminProfile = {
-    fullName: userName,
-    email: userEmail,
-    phone: '+591 7890-1234',
-    address: 'Cochabamba, Bolivia',
-    employeeId: 'ADM-2020-010',
-    position: 'Administrador de Sistemas',
-    department: 'Tecnologías de la Información',
-    hireDate: 'Junio 2020',
-  };
-
-  const profile = userRole === 'admin' ? adminProfile : userRole === 'teacher' ? teacherProfile : studentProfile;
+  if (loading) return <div className="p-8 text-center">Cargando perfil...</div>;
+  if (!profile) return <div className="p-8 text-center">Error al cargar el perfil. Por favor, inicie sesión nuevamente.</div>;
 
   return (
     <div className="p-6 lg:p-8">
@@ -64,15 +100,17 @@ export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps)
         {/* Tarjeta de perfil */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            {/* Header con color */}
             <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-light)] h-32"></div>
             
-            {/* Foto de perfil */}
             <div className="relative px-6 pb-6">
               <div className="absolute -top-16 left-1/2 -translate-x-1/2">
                 <div className="relative">
-                  <div className="w-32 h-32 bg-[var(--color-secondary)] rounded-full flex items-center justify-center border-4 border-white shadow-lg">
-                    <GraduationCap className="w-16 h-16 text-[var(--color-primary)]" />
+                  <div className="w-32 h-32 bg-[var(--color-secondary)] rounded-full flex items-center justify-center border-4 border-white shadow-lg overflow-hidden">
+                    {profile.profilePicture ? (
+                        <img src={profile.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                        <GraduationCap className="w-16 h-16 text-[var(--color-primary)]" />
+                    )}
                   </div>
                   <button className="absolute bottom-2 right-2 w-10 h-10 bg-[var(--color-primary)] rounded-full flex items-center justify-center text-white hover:bg-[var(--color-primary-dark)] transition shadow-lg">
                     <Camera className="w-5 h-5" />
@@ -81,48 +119,40 @@ export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps)
               </div>
 
               <div className="pt-20 text-center">
-                <h3 className="text-[var(--color-primary)] mb-1">{profile.fullName}</h3>
-                <p className="text-sm text-[var(--color-text-secondary)] mb-4">{roleLabels[userRole]}</p>
+                <h3 className="text-[var(--color-primary)] mb-1">{profile.name}</h3>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-4">{roleLabels[userRole as keyof typeof roleLabels]}</p>
                 
-                <button className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center justify-center gap-2">
-                  <Edit2 className="w-4 h-4" />
-                  Editar Perfil
-                </button>
+                {!isEditing ? (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="w-full px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center justify-center gap-2"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Editar Perfil
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button 
+                        onClick={handleSave}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
+                    >
+                        <Save className="w-4 h-4" /> Guardar
+                    </button>
+                    <button 
+                        onClick={() => setIsEditing(false)}
+                        className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition flex items-center justify-center"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-          {/* Tarjeta de estadísticas rápidas - solo para estudiantes */}
-          {userRole === 'student' && (
-            <div className="bg-white rounded-xl shadow-md p-6 mt-6">
-              <h4 className="text-[var(--color-primary)] mb-4">Estadísticas</h4>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[var(--color-text-secondary)]">Créditos Completados</span>
-                  <span className="text-[var(--color-primary)]">{studentProfile.credits}/{studentProfile.totalCredits}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-[var(--color-primary)] h-2 rounded-full"
-                    style={{ width: `${(studentProfile.credits / studentProfile.totalCredits) * 100}%` }}
-                  />
-                </div>
-                <div className="pt-2 border-t border-[var(--color-border)]">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[var(--color-text-secondary)]">Estado Académico</span>
-                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
-                      {studentProfile.academicStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Información detallada */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Información Personal */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="text-[var(--color-primary)] mb-6">Información Personal</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -130,7 +160,16 @@ export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps)
                 <label className="text-sm text-[var(--color-text-secondary)]">Nombre Completo</label>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <User className="w-5 h-5 text-[var(--color-primary)]" />
-                  <span>{profile.fullName}</span>
+                  {isEditing ? (
+                    <input 
+                        type="text" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        className="bg-transparent w-full outline-none"
+                    />
+                  ) : (
+                    <span>{profile.name}</span>
+                  )}
                 </div>
               </div>
 
@@ -138,7 +177,16 @@ export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps)
                 <label className="text-sm text-[var(--color-text-secondary)]">Correo Electrónico</label>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Mail className="w-5 h-5 text-[var(--color-primary)]" />
-                  <span className="truncate">{profile.email}</span>
+                  {isEditing ? (
+                    <input 
+                        type="email" 
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="bg-transparent w-full outline-none"
+                    />
+                  ) : (
+                    <span className="truncate">{profile.email}</span>
+                  )}
                 </div>
               </div>
 
@@ -146,7 +194,17 @@ export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps)
                 <label className="text-sm text-[var(--color-text-secondary)]">Teléfono</label>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <Phone className="w-5 h-5 text-[var(--color-primary)]" />
-                  <span>{profile.phone}</span>
+                  {isEditing ? (
+                    <input 
+                        type="text" 
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        placeholder="Agregar teléfono"
+                        className="bg-transparent w-full outline-none"
+                    />
+                  ) : (
+                    <span>{profile.phone || 'No registrado'}</span>
+                  )}
                 </div>
               </div>
 
@@ -154,140 +212,50 @@ export function ProfileView({ userRole, userName, userEmail }: ProfileViewProps)
                 <label className="text-sm text-[var(--color-text-secondary)]">Dirección</label>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                   <MapPin className="w-5 h-5 text-[var(--color-primary)]" />
-                  <span>{profile.address}</span>
+                  {isEditing ? (
+                    <input 
+                        type="text" 
+                        value={formData.address}
+                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        placeholder="Agregar dirección"
+                        className="bg-transparent w-full outline-none"
+                    />
+                  ) : (
+                    <span>{profile.address || 'No registrada'}</span>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Información Académica/Profesional */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-[var(--color-primary)] mb-6">
-              {userRole === 'student' ? 'Información Académica' : 'Información Profesional'}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {userRole === 'student' && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">ID de Estudiante</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{studentProfile.studentId}</span>
+          
+           {/* Cambiar contraseña (Solo en modo edición) */}
+           {isEditing && (
+            <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-[var(--color-primary)] mb-6">Cambiar Contraseña</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm text-[var(--color-text-secondary)]">Contraseña Actual</label>
+                        <input 
+                            type="password" 
+                            value={formData.currentPassword}
+                            onChange={(e) => setFormData({...formData, currentPassword: e.target.value})}
+                            className="w-full p-3 bg-gray-50 rounded-lg outline-none border focus:border-[var(--color-primary)]"
+                            placeholder="••••••••"
+                        />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Carrera</label>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <GraduationCap className="w-5 h-5 text-[var(--color-primary)]" />
-                      <span>{studentProfile.career}</span>
+                    <div className="space-y-2">
+                        <label className="text-sm text-[var(--color-text-secondary)]">Nueva Contraseña</label>
+                        <input 
+                            type="password" 
+                            value={formData.newPassword}
+                            onChange={(e) => setFormData({...formData, newPassword: e.target.value})}
+                            className="w-full p-3 bg-gray-50 rounded-lg outline-none border focus:border-[var(--color-primary)]"
+                            placeholder="••••••••"
+                        />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Fecha de Ingreso</label>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
-                      <span>{studentProfile.enrollmentDate}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Semestre Actual</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{studentProfile.currentSemester}</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {userRole === 'teacher' && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">ID de Empleado</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{teacherProfile.employeeId}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Departamento</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{teacherProfile.department}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Especialización</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{teacherProfile.specialization}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Fecha de Contratación</label>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
-                      <span>{teacherProfile.hireDate}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Carga Docente</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{teacherProfile.courseLoad} cursos activos</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {userRole === 'admin' && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">ID de Empleado</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{adminProfile.employeeId}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Cargo</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{adminProfile.position}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Departamento</label>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <span>{adminProfile.department}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm text-[var(--color-text-secondary)]">Fecha de Contratación</label>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
-                      <span>{adminProfile.hireDate}</span>
-                    </div>
-                  </div>
-                </>
-              )}
+                </div>
             </div>
-          </div>
-
-          {/* Cambiar contraseña */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-[var(--color-primary)] mb-6">Seguridad</h3>
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="mb-1">Contraseña</p>
-                <p className="text-sm text-[var(--color-text-secondary)] mb-0">••••••••</p>
-              </div>
-              <button className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition">
-                Cambiar
-              </button>
-            </div>
-          </div>
+           )}
         </div>
       </div>
     </div>

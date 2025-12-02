@@ -20,6 +20,11 @@ model User {
   career        String?   // For students
   semester      String?   // For students
   profilePicture String?
+  phone         String?
+  address       String?
+  notifications Boolean   @default(true)
+  darkMode      Boolean   @default(false)
+  language      String    @default("es")
   createdAt     DateTime  @default(now())
   
   // Relations
