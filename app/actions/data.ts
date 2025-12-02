@@ -16,21 +16,47 @@ export async function getStudentCourses() {
         include: {
           teacher: true,
           enrollments: true, // to count students
+          assignments: {
+            include: {
+                submissions: {
+                    where: { studentId: session.user.id }
+                }
+            }
+          },
+          exams: {
+            include: {
+                results: {
+                    where: { studentId: session.user.id }
+                }
+            }
+          }
         }
       }
     }
   });
 
-  return enrollments.map(e => ({
-    id: e.course.id,
-    name: e.course.name,
-    code: e.course.code,
-    teacher: e.course.teacher.name,
-    schedule: 'Por definir', // Schedule not in DB yet, mocked
-    students: e.course.enrollments.length,
-    progress: e.progress,
-    color: 'bg-blue-500' // Mocked color
-  }));
+  return enrollments.map(e => {
+    const totalAssignments = e.course.assignments.length;
+    const totalExams = e.course.exams.length;
+    const totalItems = totalAssignments + totalExams;
+
+    const submittedAssignments = e.course.assignments.filter(a => a.submissions.length > 0).length;
+    const submittedExams = e.course.exams.filter(ex => ex.results.length > 0).length;
+    const completedItems = submittedAssignments + submittedExams;
+
+    const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
+    return {
+        id: e.course.id,
+        name: e.course.name,
+        code: e.course.code,
+        teacher: e.course.teacher.name,
+        schedule: 'Por definir', // Schedule not in DB yet, mocked
+        students: e.course.enrollments.length,
+        progress: progress,
+        color: 'bg-blue-500' // Mocked color
+    };
+  });
 }
 
 export async function getStudentGrades() {
