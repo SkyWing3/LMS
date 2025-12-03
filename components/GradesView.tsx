@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Award, TrendingUp, TrendingDown, Minus, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getStudentGrades } from '@/app/actions/data';
 
@@ -36,153 +36,188 @@ export function GradesView() {
     ? courses.reduce((sum, course) => sum + course.average, 0) / courses.length 
     : 0;
 
-  const getGradeColor = (score: number, max: number) => {
+  // Helper para clases semánticas
+  const getGradeStatus = (score: number, max: number) => {
     const percentage = (score / max) * 100;
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 80) return 'text-blue-600';
-    if (percentage >= 70) return 'text-orange-600';
-    return 'text-red-600';
-  };
-
-  const getGradeBgColor = (score: number, max: number) => {
-    const percentage = (score / max) * 100;
-    if (percentage >= 90) return 'bg-green-50 border-green-200';
-    if (percentage >= 80) return 'bg-blue-50 border-blue-200';
-    if (percentage >= 70) return 'bg-orange-50 border-orange-200';
-    return 'bg-red-50 border-red-200';
+    if (percentage >= 90) return { 
+        text: 'text-[var(--color-success)]', 
+        bg: 'bg-[var(--color-success-light)]', 
+        border: 'border-[var(--color-success)]' 
+    };
+    if (percentage >= 80) return { 
+        text: 'text-[var(--color-info)]', 
+        bg: 'bg-[var(--color-info-light)]', 
+        border: 'border-[var(--color-info)]' 
+    };
+    if (percentage >= 70) return { 
+        text: 'text-[var(--color-warning-dark)]', 
+        bg: 'bg-[var(--color-warning-light)]', 
+        border: 'border-[var(--color-warning)]' 
+    };
+    return { 
+        text: 'text-[var(--color-danger)]', 
+        bg: 'bg-[var(--color-danger-light)]', 
+        border: 'border-[var(--color-danger)]' 
+    };
   };
 
   const getTrendIcon = (trend: string) => {
-    if (trend === 'up') return <TrendingUp className="w-5 h-5 text-green-600" />;
-    if (trend === 'down') return <TrendingDown className="w-5 h-5 text-red-600" />;
-    return <Minus className="w-5 h-5 text-gray-600" />;
+    if (trend === 'up') return <TrendingUp className="w-5 h-5 text-[var(--color-success)]" />;
+    if (trend === 'down') return <TrendingDown className="w-5 h-5 text-[var(--color-danger)]" />;
+    return <Minus className="w-5 h-5 text-[var(--color-text-secondary)]" />;
   };
 
   if (isLoading) {
     return (
-      <div className="p-6 lg:p-8 flex justify-center">
+      <div className="p-6 lg:p-8 flex justify-center items-center min-h-[200px]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 lg:p-8">
-      <div className="mb-8">
-        <h1 className="text-[var(--color-primary)] mb-2">Calificaciones</h1>
-        <p className="text-[var(--color-text-secondary)]">Periodo Académico 2025-1</p>
+    <div className="p-6 lg:p-8 space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-[var(--color-primary)] mb-1 text-2xl lg:text-3xl">Calificaciones</h1>
+          <p className="text-[var(--color-text-secondary)] flex items-center gap-2">
+             <Award className="w-4 h-4" />
+             Periodo Académico 2025-1
+          </p>
+        </div>
       </div>
 
       {/* Resumen general */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-light)] rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <Award className="w-10 h-10" />
-            <TrendingUp className="w-6 h-6" />
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-[var(--color-primary)] rounded-xl shadow-lg p-6 text-white relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 group-hover:scale-110 transition-transform duration-500" />
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <Award className="w-8 h-8 text-[var(--color-secondary)]" />
+            <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded backdrop-blur-sm">Global</span>
           </div>
-          <h2 className="text-white mb-1">{overallAverage.toFixed(1)}</h2>
-          <p className="text-white/90 text-sm mb-0">Promedio General</p>
+          <h2 className="text-white text-4xl font-bold mb-1">{overallAverage.toFixed(1)}</h2>
+          <p className="text-white/80 text-sm mb-0 font-medium">Promedio General</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500">
-          <h3 className="text-green-600 mb-1">{courses.filter(c => c.average >= 90).length}</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Cursos con A</p>
-          <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">(90-100)</p>
+        <div className="bg-[var(--color-surface)] rounded-xl shadow-sm p-6 border-l-4 border-[var(--color-success)]">
+          <div className="flex justify-between items-start mb-2">
+             <h3 className="text-[var(--color-success)] text-3xl font-bold mb-0">{courses.filter(c => c.average >= 90).length}</h3>
+             <span className="text-xs font-bold text-[var(--color-success)] bg-[var(--color-success-light)] px-2 py-1 rounded">Excelente</span>
+          </div>
+          <p className="text-sm text-[var(--color-text)] font-medium mb-0">Cursos con A</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">(90-100 puntos)</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500">
-          <h3 className="text-blue-600 mb-1">{courses.filter(c => c.average >= 80 && c.average < 90).length}</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Cursos con B</p>
-          <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">(80-89)</p>
+        <div className="bg-[var(--color-surface)] rounded-xl shadow-sm p-6 border-l-4 border-[var(--color-info)]">
+           <div className="flex justify-between items-start mb-2">
+             <h3 className="text-[var(--color-info)] text-3xl font-bold mb-0">{courses.filter(c => c.average >= 80 && c.average < 90).length}</h3>
+             <span className="text-xs font-bold text-[var(--color-info)] bg-[var(--color-info-light)] px-2 py-1 rounded">Bueno</span>
+          </div>
+          <p className="text-sm text-[var(--color-text)] font-medium mb-0">Cursos con B</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">(80-89 puntos)</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-500">
-          <h3 className="text-orange-600 mb-1">{courses.filter(c => c.average < 80).length}</h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-0">Cursos con C o menos</p>
-          <p className="text-xs text-[var(--color-text-secondary)] mt-1 mb-0">(Menor a 80)</p>
+        <div className="bg-[var(--color-surface)] rounded-xl shadow-sm p-6 border-l-4 border-[var(--color-warning)]">
+           <div className="flex justify-between items-start mb-2">
+             <h3 className="text-[var(--color-warning-dark)] text-3xl font-bold mb-0">{courses.filter(c => c.average < 80).length}</h3>
+             <span className="text-xs font-bold text-[var(--color-warning-dark)] bg-[var(--color-warning-light)] px-2 py-1 rounded">Regular</span>
+          </div>
+          <p className="text-sm text-[var(--color-text)] font-medium mb-0">Cursos con C o menos</p>
+          <p className="text-xs text-[var(--color-text-secondary)] mt-1">(Menor a 80 puntos)</p>
         </div>
       </div>
 
       {/* Calificaciones por curso */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         {courses.length === 0 && (
-           <div className="text-center p-8 bg-white rounded-xl shadow-sm text-gray-500">
-             No tienes calificaciones registradas aún.
+           <div className="text-center p-12 bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-border)]">
+             <Award className="w-12 h-12 text-[var(--color-text-light)] mx-auto mb-4" />
+             <p className="text-[var(--color-text-secondary)] text-lg">No tienes calificaciones registradas aún.</p>
            </div>
         )}
         {courses.map((course) => (
-          <div key={course.id} className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div key={course.id} className="bg-[var(--color-surface)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden hover:shadow-md transition-shadow">
             {/* Header del curso */}
-            <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-light)] p-6 text-white">
-              <div className="flex items-center justify-between">
+            <div className="bg-[var(--color-surface-hover)] p-6 border-b border-[var(--color-border)]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-white mb-1">{course.name}</h3>
-                  <p className="text-white/90 text-sm mb-0">{course.code}</p>
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="text-[var(--color-primary)] text-lg font-bold mb-0">{course.name}</h3>
+                    <span className="px-2 py-0.5 bg-[var(--color-bg)] text-[var(--color-text-secondary)] rounded text-xs border border-[var(--color-border)]">
+                        {course.code}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-[var(--color-text-secondary)]">
+                      <span>Progreso: {course.grades.reduce((sum, g) => sum + g.weight, 0).toFixed(0)}%</span>
+                      {/* Barra mini */}
+                      <div className="w-24 bg-[var(--color-border)] rounded-full h-1.5">
+                        <div className="bg-[var(--color-primary)] h-1.5 rounded-full" style={{ width: `${Math.min(course.grades.reduce((sum, g) => sum + g.weight, 0), 100)}%` }}></div>
+                      </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  {getTrendIcon(course.trend)}
-                  <div className="text-right">
-                    <div className="text-3xl">{course.average}</div>
-                    <div className="text-sm text-white/90">Promedio</div>
+                
+                <div className="flex items-center gap-6 bg-[var(--color-bg)] px-4 py-2 rounded-lg border border-[var(--color-border)]">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-[var(--color-text-secondary)]">Tendencia</span>
+                    {getTrendIcon(course.trend)}
+                  </div>
+                  <div className="text-right border-l border-[var(--color-border)] pl-6">
+                    <div className={`text-2xl font-bold ${getGradeStatus(course.average, 100).text}`}>{course.average}</div>
+                    <div className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wide">Promedio</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Tabla de calificaciones */}
-            <div className="p-6">
-              {course.grades.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-[var(--color-border)]">
-                      <th className="text-left py-3 px-4 text-[var(--color-text-secondary)]">Evaluación</th>
-                      <th className="text-center py-3 px-4 text-[var(--color-text-secondary)]">Fecha</th>
-                      <th className="text-center py-3 px-4 text-[var(--color-text-secondary)]">Peso</th>
-                      <th className="text-center py-3 px-4 text-[var(--color-text-secondary)]">Calificación</th>
-                      <th className="text-center py-3 px-4 text-[var(--color-text-secondary)]">Porcentaje</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {course.grades.map((grade, index) => (
-                      <tr key={index} className="border-b border-[var(--color-border)] last:border-0 hover:bg-gray-50">
-                        <td className="py-4 px-4">{grade.type}</td>
-                        <td className="py-4 px-4 text-center text-sm text-[var(--color-text-secondary)]">{grade.date}</td>
-                        <td className="py-4 px-4 text-center text-sm">{grade.weight.toFixed(0)}%</td>
-                        <td className="py-4 px-4 text-center">
-                          <span className={`${getGradeColor(grade.score, grade.max)}`}>
-                            {grade.score}/{grade.max}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-[var(--color-bg)] text-[var(--color-text-secondary)] font-medium border-b border-[var(--color-border)]">
+                  <tr>
+                    <th className="text-left py-3 px-6">Evaluación</th>
+                    <th className="text-center py-3 px-6">Fecha</th>
+                    <th className="text-center py-3 px-6">Peso</th>
+                    <th className="text-center py-3 px-6">Calificación</th>
+                    <th className="text-center py-3 px-6">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {course.grades.length > 0 ? (
+                    course.grades.map((grade, index) => {
+                        const status = getGradeStatus(grade.score, grade.max);
+                        return (
+                      <tr key={index} className="hover:bg-[var(--color-surface-hover)] transition-colors">
+                        <td className="py-4 px-6 font-medium text-[var(--color-text)]">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-[var(--color-bg)] flex items-center justify-center text-[var(--color-text-secondary)]">
+                                    <FileText className="w-4 h-4" />
+                                </div>
+                                {grade.type}
+                            </div>
+                        </td>
+                        <td className="py-4 px-6 text-center text-[var(--color-text-secondary)]">{grade.date}</td>
+                        <td className="py-4 px-6 text-center font-medium text-[var(--color-text)]">{grade.weight.toFixed(0)}%</td>
+                        <td className="py-4 px-6 text-center">
+                          <span className={`font-bold ${status.text}`}>
+                            {grade.score} <span className="text-[var(--color-text-light)] text-xs font-normal">/ {grade.max}</span>
                           </span>
                         </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className={`px-3 py-1 rounded-full text-sm border ${getGradeBgColor(grade.score, grade.max)}`}>
-                            {((grade.score / grade.max) * 100).toFixed(1)}%
+                        <td className="py-4 px-6 text-center">
+                          <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${status.bg} ${status.text} ${status.border}`}>
+                            {((grade.score / grade.max) * 100).toFixed(0)}%
                           </span>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500">Sin calificaciones registradas.</div>
-              )}
-
-              {/* Barra de progreso del promedio */}
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm">Progreso del curso</span>
-                  <span className="text-sm">
-                    {course.grades.reduce((sum, g) => sum + g.weight, 0).toFixed(0)}% completado
-                  </span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-[var(--color-primary)] h-3 rounded-full transition-all"
-                    style={{ width: `${Math.min(course.grades.reduce((sum, g) => sum + g.weight, 0), 100)}%` }}
-                  />
-                </div>
-              </div>
+                    )})
+                  ) : (
+                    <tr>
+                        <td colSpan={5} className="text-center py-8 text-[var(--color-text-secondary)]">
+                            Sin calificaciones registradas.
+                        </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         ))}

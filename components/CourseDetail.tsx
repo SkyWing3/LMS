@@ -70,57 +70,57 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
   const [activeExam, setActiveExam] = useState<any>(null);
   const [examAnswers, setExamAnswers] = useState<Record<number, any>>({}); // questionId -> { text?, optionId? }
 
-  const fetchData = async () => {
-    const [data, user] = await Promise.all([
-      getCourseDetails(courseId),
-      getUser()
-    ]);
-    
-    if (user) setUserRole(user.role);
-
-    if (data) {
-      setCourse({
-        id: data.id,
-        name: data.name,
-        code: data.code,
-        teacher: data.teacher,
-        color: 'bg-blue-500', 
-      });
-
-      setTasks(data.assignments.map((a: any) => ({
-        id: a.id,
-        title: a.title,
-        description: a.description,
-        dueDate: new Date(a.dueDate).toLocaleDateString(),
-        status: a.submissions[0]?.status || 'pending',
-        points: a.totalPoints,
-        grade: a.submissions[0]?.grade
-      })));
-
-      setResources(data.materials.map((m: any) => ({
-        id: m.id,
-        title: m.title,
-        type: m.type,
-        size: 'Unknown', 
-        date: new Date(m.createdAt).toLocaleDateString(),
-        url: m.url
-      })));
-
-      setExams(data.exams.map((e: any) => ({
-        id: e.id,
-        title: e.title,
-        date: new Date(e.date).toLocaleDateString(),
-        time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        duration: `${e.duration} min`,
-        status: e.results[0]?.status || 'upcoming', // submitted, graded, upcoming
-        grade: e.results[0]?.grade,
-        topics: []
-      })));
-    }
-    setIsLoading(false);
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+        const [data, user] = await Promise.all([
+          getCourseDetails(courseId),
+          getUser()
+        ]);
+        
+        if (user) setUserRole(user.role);
+    
+        if (data) {
+          setCourse({
+            id: data.id,
+            name: data.name,
+            code: data.code,
+            teacher: data.teacher,
+            color: 'bg-[var(--color-primary)]', 
+          });
+    
+          setTasks(data.assignments.map((a: any) => ({
+            id: a.id,
+            title: a.title,
+            description: a.description,
+            dueDate: new Date(a.dueDate).toLocaleDateString(),
+            status: a.submissions[0]?.status || 'pending',
+            points: a.totalPoints,
+            grade: a.submissions[0]?.grade
+          })));
+    
+          setResources(data.materials.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            type: m.type,
+            size: 'Unknown', 
+            date: new Date(m.createdAt).toLocaleDateString(),
+            url: m.url
+          })));
+    
+          setExams(data.exams.map((e: any) => ({
+            id: e.id,
+            title: e.title,
+            date: new Date(e.date).toLocaleDateString(),
+            time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            duration: `${e.duration} min`,
+            status: e.results[0]?.status || 'upcoming', // submitted, graded, upcoming
+            grade: e.results[0]?.grade,
+            topics: []
+          })));
+        }
+        setIsLoading(false);
+      };
+
     fetchData();
   }, [courseId]);
 
@@ -187,7 +187,7 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
 
   if (isLoading) {
      return (
-      <div className="p-6 lg:p-8 flex justify-center">
+      <div className="p-6 lg:p-8 flex justify-center items-center min-h-[200px]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
       </div>
     );
@@ -196,57 +196,78 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
   if (!course) return <div>Curso no encontrado</div>;
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 space-y-8">
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] mb-4"
+          className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] mb-6 font-medium transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           Volver a Mis Cursos
         </button>
 
-        <div className={`${course.color} rounded-xl p-6 text-white shadow-lg`}>
-          <div className="flex items-start justify-between">
+        <div className="bg-[var(--color-primary)] rounded-xl p-8 text-white shadow-lg relative overflow-hidden">
+           <div className="absolute inset-0 bg-black/10"></div>
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-white mb-2">{course.name}</h1>
-              <p className="text-white/90 mb-0">{course.teacher.name}</p>
+              <span className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-xs font-semibold border border-white/10 mb-3 inline-block">
+                {course.code}
+              </span>
+              <h1 className="text-white text-3xl font-bold mb-1 leading-tight">{course.name}</h1>
+              <p className="text-white/90 mb-0 font-medium flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[var(--color-secondary)]"></span>
+                  {course.teacher.name}
+              </p>
             </div>
-            <span className="px-3 py-1 bg-white/20 rounded-lg">{course.code}</span>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-md mb-6">
+      <div className="bg-[var(--color-surface)] rounded-xl shadow-sm mb-6 border border-[var(--color-border)]">
         <div className="border-b border-[var(--color-border)]">
-          <div className="flex gap-4 px-6">
-            <button onClick={() => setActiveTab('resources')} className={`py-4 px-4 border-b-2 transition flex items-center gap-2 ${activeTab === 'resources' ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'}`}>
+          <div className="flex gap-1 px-6 overflow-x-auto">
+            <button onClick={() => setActiveTab('resources')} className={`py-4 px-6 border-b-2 transition font-medium flex items-center gap-2 whitespace-nowrap ${activeTab === 'resources' ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-surface)]/50' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]'}`}>
               <FileText className="w-5 h-5" /> Recursos
             </button>
-            <button onClick={() => setActiveTab('tasks')} className={`py-4 px-4 border-b-2 transition flex items-center gap-2 ${activeTab === 'tasks' ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'}`}>
+            <button onClick={() => setActiveTab('tasks')} className={`py-4 px-6 border-b-2 transition font-medium flex items-center gap-2 whitespace-nowrap ${activeTab === 'tasks' ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-surface)]/50' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]'}`}>
               <CheckSquare className="w-5 h-5" /> Tareas
             </button>
-            <button onClick={() => setActiveTab('exams')} className={`py-4 px-4 border-b-2 transition flex items-center gap-2 ${activeTab === 'exams' ? 'border-[var(--color-primary)] text-[var(--color-primary)]' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'}`}>
+            <button onClick={() => setActiveTab('exams')} className={`py-4 px-6 border-b-2 transition font-medium flex items-center gap-2 whitespace-nowrap ${activeTab === 'exams' ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-surface)]/50' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]'}`}>
               <ClipboardList className="w-5 h-5" /> Exámenes
             </button>
           </div>
         </div>
 
-        <div className="p-6">
-          {/* Resources Content (Unchanged logic) */}
+        <div className="p-6 min-h-[300px]">
+          {/* Resources Content */}
           {activeTab === 'resources' && (
-            <div className="space-y-4">
-              {resources.length === 0 && <p className="text-gray-500">No hay recursos disponibles.</p>}
+            <div className="space-y-3">
+              {resources.length === 0 && (
+                <div className="text-center py-12 text-[var(--color-text-secondary)]">
+                    <FileText className="w-12 h-12 mx-auto mb-3 opacity-20"/>
+                    <p>No hay recursos disponibles.</p>
+                </div>
+              )}
               {resources.map((resource) => (
-                <div key={resource.id} className="flex items-center gap-4 p-4 border border-[var(--color-border)] rounded-lg hover:shadow-md transition">
-                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0"><FileText className="w-6 h-6 text-[var(--color-primary)]" /></div>
-                   <div className="flex-1 min-w-0">
-                       <p className="mb-1 truncate font-bold">{resource.title}</p>
-                       <p className="text-sm text-gray-600">{resource.type}</p>
-                       {resource.url && <a href={resource.url} target="_blank" className="text-xs text-blue-500 hover:underline block truncate">{resource.url}</a>}
+                <div key={resource.id} className="flex items-center gap-4 p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-xl hover:shadow-md transition-all group">
+                   <div className="w-12 h-12 bg-[var(--color-primary-surface)] rounded-lg flex items-center justify-center flex-shrink-0 text-[var(--color-primary)] group-hover:bg-[var(--color-primary)] group-hover:text-white transition-colors">
+                       <FileText className="w-6 h-6" />
                    </div>
+                   <div className="flex-1 min-w-0">
+                       <p className="mb-1 truncate font-semibold text-[var(--color-text)]">{resource.title}</p>
+                       <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                           <span className="uppercase font-medium bg-[var(--color-surface)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">{resource.type}</span>
+                           <span>•</span>
+                           <span>{resource.date}</span>
+                       </div>
+                   </div>
+                   {resource.url && (
+                       <a href={resource.url} target="_blank" className="p-2 text-[var(--color-primary)] hover:bg-[var(--color-primary-surface)] rounded-lg transition" title="Abrir recurso">
+                           <ExternalLink className="w-5 h-5"/>
+                       </a>
+                   )}
                 </div>
               ))}
             </div>
@@ -255,51 +276,90 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           {/* Tasks Content */}
           {activeTab === 'tasks' && (
             <div className="space-y-4">
-              {tasks.length === 0 && <p className="text-gray-500">No hay tareas asignadas.</p>}
-              {tasks.map((task) => (
-                <div key={task.id} className={`p-5 border-l-4 rounded-lg ${task.status === 'submitted' || task.status === 'graded' ? 'border-green-500 bg-green-50' : 'border-orange-500 bg-orange-50'}`}>
-                   <div className="flex justify-between">
+              {tasks.length === 0 && (
+                <div className="text-center py-12 text-[var(--color-text-secondary)]">
+                    <CheckSquare className="w-12 h-12 mx-auto mb-3 opacity-20"/>
+                    <p>No hay tareas asignadas.</p>
+                </div>
+              )}
+              {tasks.map((task) => {
+                  const isCompleted = task.status === 'submitted' || task.status === 'graded';
+                  const statusColor = isCompleted 
+                    ? { border: 'border-[var(--color-success)]', bg: 'bg-[var(--color-success-light)]', text: 'text-[var(--color-success-dark)]' }
+                    : { border: 'border-[var(--color-warning)]', bg: 'bg-[var(--color-warning-light)]', text: 'text-[var(--color-warning-dark)]' };
+                    
+                  return (
+                <div key={task.id} className={`p-5 border-l-4 rounded-lg bg-[var(--color-surface)] border border-t border-r border-b border-[var(--color-border)] hover:shadow-sm transition ${statusColor.border}`}>
+                   <div className="flex justify-between items-start gap-4">
                        <div>
-                           <h4 className="text-[var(--color-primary)] font-bold">{task.title}</h4>
-                           <p className="text-sm">{task.description}</p>
+                           <h4 className="text-[var(--color-text)] font-bold text-lg mb-1">{task.title}</h4>
+                           <p className="text-sm text-[var(--color-text-secondary)] mb-3 line-clamp-2">{task.description}</p>
+                           <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)] font-medium">
+                               <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> Vence: {task.dueDate}</span>
+                               <span>•</span>
+                               <span>{task.points} pts</span>
+                           </div>
                        </div>
-                       <span className={`px-3 py-1 rounded text-sm h-fit ${task.status !== 'pending' ? 'bg-green-200 text-green-800' : 'bg-orange-200 text-orange-800'}`}>
-                           {task.status === 'pending' ? 'Pendiente' : (task.status === 'graded' ? 'Calificado' : 'Entregado')}
-                       </span>
+                       <div className="flex flex-col items-end gap-2">
+                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusColor.bg} ${statusColor.text}`}>
+                               {task.status === 'pending' ? 'Pendiente' : (task.status === 'graded' ? 'Calificado' : 'Entregado')}
+                           </span>
+                           {task.grade && <span className="text-lg font-bold text-[var(--color-text)]">{task.grade} <span className="text-xs font-normal text-[var(--color-text-secondary)]">/ {task.points}</span></span>}
+                       </div>
                    </div>
-                   <div className="flex items-center justify-between mt-4">
-                       <div className="text-sm text-gray-600">Vence: {task.dueDate} • {task.points} pts {task.grade && <span className="font-bold text-black ml-2">Nota: {task.grade}</span>}</div>
+                   <div className="flex justify-end mt-4 border-t border-[var(--color-border)] pt-4">
                        {task.status === 'pending' && userRole === 'student' && (
-                           <button onClick={() => handleOpenSubmit(task.id)} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded flex gap-2 items-center hover:bg-blue-700"><Upload className="w-4 h-4"/> Entregar</button>
+                           <button onClick={() => handleOpenSubmit(task.id)} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg flex gap-2 items-center hover:bg-[var(--color-primary-dark)] transition shadow-sm font-medium text-sm">
+                               <Upload className="w-4 h-4"/> Entregar Tarea
+                           </button>
                        )}
                    </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
 
           {/* Exams Content */}
           {activeTab === 'exams' && (
             <div className="space-y-4">
-              {exams.length === 0 && <p className="text-gray-500">No hay exámenes programados.</p>}
-              {exams.map((exam) => (
-                <div key={exam.id} className={`p-5 border-l-4 rounded-lg ${exam.status === 'graded' ? 'border-green-500 bg-green-50' : (exam.status === 'submitted' ? 'border-blue-500 bg-blue-50' : 'border-red-500 bg-red-50')}`}>
-                   <div className="flex justify-between">
+              {exams.length === 0 && (
+                <div className="text-center py-12 text-[var(--color-text-secondary)]">
+                    <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-20"/>
+                    <p>No hay exámenes programados.</p>
+                </div>
+              )}
+              {exams.map((exam) => {
+                 const isCompleted = exam.status === 'submitted' || exam.status === 'graded';
+                 const statusColor = exam.status === 'graded'
+                    ? { border: 'border-[var(--color-success)]', bg: 'bg-[var(--color-success-light)]', text: 'text-[var(--color-success-dark)]' }
+                    : (exam.status === 'submitted' 
+                        ? { border: 'border-[var(--color-info)]', bg: 'bg-[var(--color-info-light)]', text: 'text-[var(--color-info-dark)]' }
+                        : { border: 'border-[var(--color-danger)]', bg: 'bg-[var(--color-danger-light)]', text: 'text-[var(--color-danger-dark)]' });
+                
+                 return (
+                <div key={exam.id} className={`p-5 border-l-4 rounded-lg bg-[var(--color-surface)] border border-t border-r border-b border-[var(--color-border)] hover:shadow-sm transition ${statusColor.border}`}>
+                   <div className="flex justify-between items-start gap-4">
                        <div>
-                           <h4 className="text-[var(--color-primary)] font-bold">{exam.title}</h4>
-                           <p className="text-sm text-gray-600">{exam.date} • {exam.time} • {exam.duration}</p>
+                           <h4 className="text-[var(--color-text)] font-bold text-lg mb-1">{exam.title}</h4>
+                           <p className="text-sm text-[var(--color-text-secondary)] flex items-center gap-2 mb-0">
+                               <Calendar className="w-4 h-4"/> {exam.date} • {exam.time} • {exam.duration}
+                           </p>
                        </div>
-                       <span className={`px-3 py-1 rounded text-sm h-fit ${exam.status === 'graded' ? 'bg-green-200 text-green-800' : (exam.status === 'submitted' ? 'bg-blue-200 text-blue-800' : 'bg-red-100 text-red-800')}`}>
-                           {exam.status === 'graded' ? `Nota: ${exam.grade}` : (exam.status === 'submitted' ? 'Enviado' : 'Pendiente')}
-                       </span>
+                       <div className="flex flex-col items-end gap-2">
+                           <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${statusColor.bg} ${statusColor.text}`}>
+                               {exam.status === 'graded' ? `Nota: ${exam.grade}` : (exam.status === 'submitted' ? 'Enviado' : 'Pendiente')}
+                           </span>
+                       </div>
                    </div>
-                   <div className="flex justify-end mt-4">
+                   <div className="flex justify-end mt-4 border-t border-[var(--color-border)] pt-4">
                        {exam.status === 'upcoming' && userRole === 'student' && (
-                           <button onClick={() => handleStartExam(exam.id)} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded hover:bg-blue-700">Comenzar Examen</button>
+                           <button onClick={() => handleStartExam(exam.id)} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition shadow-sm font-medium text-sm">
+                               Comenzar Examen
+                           </button>
                        )}
                    </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -307,18 +367,26 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
 
       {/* Assignment Submission Modal */}
       {showSubmitModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
-              <div className="flex justify-between mb-4">
-                  <h3 className="font-bold text-lg">Entregar Tarea</h3>
-                  <button onClick={() => setShowSubmitModal(false)}><X className="w-5 h-5"/></button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[var(--color-surface)] rounded-xl shadow-2xl max-w-lg w-full p-6">
+              <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-lg text-[var(--color-primary)]">Entregar Tarea</h3>
+                  <button onClick={() => setShowSubmitModal(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"><X className="w-5 h-5"/></button>
               </div>
               <div className="space-y-4">
-                  <input type="url" placeholder="URL del archivo (Drive, etc)" className="w-full p-2 border rounded" value={submissionUrl} onChange={e => setSubmissionUrl(e.target.value)} />
-                  <textarea placeholder="Comentarios" className="w-full p-2 border rounded" rows={3} value={submissionContent} onChange={e => setSubmissionContent(e.target.value)} />
-                  <button onClick={handleSubmitAssignment} disabled={isSubmitting} className="w-full py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-                      {isSubmitting ? 'Enviando...' : 'Entregar'}
-                  </button>
+                  <div>
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Enlace del Archivo</label>
+                      <input type="url" placeholder="Google Drive, Dropbox, etc." className="w-full p-3 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" value={submissionUrl} onChange={e => setSubmissionUrl(e.target.value)} />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Comentarios Adicionales</label>
+                      <textarea placeholder="Escribe aquí..." className="w-full p-3 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" rows={3} value={submissionContent} onChange={e => setSubmissionContent(e.target.value)} />
+                  </div>
+                  <div className="pt-2">
+                    <button onClick={handleSubmitAssignment} disabled={isSubmitting} className="w-full py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] disabled:opacity-70 transition font-medium shadow-sm">
+                        {isSubmitting ? 'Enviando...' : 'Entregar Tarea'}
+                    </button>
+                  </div>
               </div>
           </div>
         </div>
@@ -326,39 +394,44 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
 
       {/* Exam Taking Modal */}
       {showExamModal && activeExam && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-              <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col">
-                  <div className="p-6 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
+              <div className="bg-[var(--color-surface)] rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl">
+                  <div className="p-6 border-b border-[var(--color-border)] sticky top-0 bg-[var(--color-surface)] z-10 flex justify-between items-center">
                       <div>
                           <h2 className="text-xl font-bold text-[var(--color-primary)]">{activeExam.title}</h2>
-                          <p className="text-sm text-gray-500">Tiempo: {activeExam.duration} min</p>
+                          <p className="text-sm text-[var(--color-text-secondary)] font-medium flex items-center gap-1"><Calendar className="w-4 h-4"/> Tiempo límite: {activeExam.duration} min</p>
                       </div>
-                      <button onClick={() => setShowExamModal(false)} className="text-gray-400 hover:text-red-500">Salir (Sin guardar)</button>
+                      <button onClick={() => setShowExamModal(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] font-medium text-sm px-3 py-1 rounded hover:bg-[var(--color-danger-light)] transition">Salir</button>
                   </div>
                   
-                  <div className="p-6 space-y-8 flex-1">
+                  <div className="p-8 space-y-8 flex-1 bg-[var(--color-bg)]">
                       {activeExam.questions.map((q: any, idx: number) => (
-                          <div key={q.id} className="border p-4 rounded bg-gray-50">
-                              <p className="font-bold mb-3">{idx + 1}. {q.text} <span className="text-xs font-normal text-gray-500">({q.points} pts)</span></p>
+                          <div key={q.id} className="border border-[var(--color-border)] p-6 rounded-xl bg-[var(--color-surface)] shadow-sm">
+                              <p className="font-bold mb-4 text-lg text-[var(--color-text)] flex gap-2">
+                                  <span className="text-[var(--color-primary)]">{idx + 1}.</span> 
+                                  {q.text} 
+                                  <span className="text-xs font-normal text-[var(--color-text-secondary)] bg-[var(--color-bg)] px-2 py-1 rounded h-fit border border-[var(--color-border)]">({q.points} pts)</span>
+                              </p>
                               
                               {q.type === 'OPEN' ? (
                                   <textarea 
-                                    className="w-full p-2 border rounded" 
+                                    className="w-full p-3 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none transition" 
                                     rows={3} 
-                                    placeholder="Tu respuesta..." 
+                                    placeholder="Escribe tu respuesta aquí..." 
                                     onChange={(e) => handleExamAnswer(q.id, e.target.value, 'OPEN')}
                                   />
                               ) : (
-                                  <div className="space-y-2">
+                                  <div className="space-y-3">
                                       {q.options.map((opt: any) => (
-                                          <label key={opt.id} className="flex items-center gap-3 p-2 border rounded bg-white cursor-pointer hover:bg-blue-50">
+                                          <label key={opt.id} className="flex items-center gap-3 p-3 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] cursor-pointer hover:bg-[var(--color-surface-hover)] hover:border-[var(--color-primary)] transition">
                                               <input 
                                                 type="radio" 
                                                 name={`q-${q.id}`} 
                                                 value={opt.id} 
                                                 onChange={(e) => handleExamAnswer(q.id, e.target.value, 'MULTIPLE_CHOICE')}
+                                                className="text-[var(--color-primary)] focus:ring-[var(--color-primary)] w-4 h-4"
                                               />
-                                              <span>{opt.text}</span>
+                                              <span className="text-[var(--color-text)]">{opt.text}</span>
                                           </label>
                                       ))}
                                   </div>
@@ -367,8 +440,8 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
                       ))}
                   </div>
 
-                  <div className="p-6 border-t sticky bottom-0 bg-white">
-                      <button onClick={handleSubmitExam} disabled={isSubmitting} className="w-full py-3 bg-green-600 text-white font-bold rounded hover:bg-green-700 disabled:opacity-50">
+                  <div className="p-6 border-t border-[var(--color-border)] sticky bottom-0 bg-[var(--color-surface)]">
+                      <button onClick={handleSubmitExam} disabled={isSubmitting} className="w-full py-3.5 bg-[var(--color-success)] text-white font-bold rounded-lg hover:bg-[var(--color-success-dark)] disabled:opacity-70 transition shadow-md text-lg">
                           {isSubmitting ? 'Enviando respuestas...' : 'Finalizar y Enviar Examen'}
                       </button>
                   </div>

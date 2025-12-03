@@ -66,10 +66,6 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
   const [feedbackInput, setFeedbackInput] = useState('');
   const [submissionType, setSubmissionType] = useState<'assignment' | 'exam' | null>(null);
 
-  useEffect(() => {
-    loadCourses();
-  }, []);
-
   const loadCourses = () => {
     getTeacherCourses().then((data) => {
       const mapped = data.map((c: any) => ({
@@ -79,12 +75,16 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
         students: c.students,
         pendingGrades: 0,
         schedule: 'Por definir',
-        color: 'bg-blue-500'
+        color: 'bg-[var(--color-primary)]'
       }));
       setCourses(mapped);
       setIsLoading(false);
     });
   };
+
+  useEffect(() => {
+    loadCourses();
+  }, []);
 
   // --- Exam Creator Logic ---
   const addQuestion = () => {
@@ -220,27 +220,48 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
     if (selectedCourse) openGradingModal(selectedCourse);
   };
 
-  if (isLoading) return <div>Cargando...</div>;
+  if (isLoading) return (
+    <div className="p-6 lg:p-8 flex justify-center items-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+    </div>
+  );
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 space-y-8">
       <div className="mb-8">
-        <h1 className="text-[var(--color-primary)] mb-2">Panel Docente</h1>
+        <h1 className="text-[var(--color-primary)] mb-2 text-2xl lg:text-3xl">Panel Docente</h1>
+        <p className="text-[var(--color-text-secondary)]">Gestiona tus cursos y evaluaciones</p>
       </div>
 
       {/* Course List */}
       <div className="space-y-6">
         {courses.map((course) => (
-          <div key={course.id} className="bg-white rounded-xl shadow-md p-6">
-             <h3 className="text-xl font-bold text-[var(--color-primary)]">{course.name}</h3>
-             <div className="flex gap-4 mt-4">
-                <button onClick={() => { setSelectedCourse(course.id); setContentType('exam'); setShowAddModal(true); }} className="text-sm bg-purple-50 text-purple-600 px-3 py-2 rounded flex gap-2">
+          <div key={course.id} className="bg-[var(--color-surface)] rounded-xl shadow-sm p-6 border border-[var(--color-border)] hover:shadow-md transition-shadow">
+             <div className="flex justify-between items-start mb-4">
+                <div>
+                    <h3 className="text-xl font-bold text-[var(--color-primary)] mb-1">{course.name}</h3>
+                    <p className="text-sm text-[var(--color-text-secondary)]">{course.code}</p>
+                </div>
+                <span className="px-3 py-1 bg-[var(--color-bg)] rounded-full text-xs font-medium border border-[var(--color-border)]">{course.students} Estudiantes</span>
+             </div>
+             
+             <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+                <button 
+                    onClick={() => { setSelectedCourse(course.id); setContentType('exam'); setShowAddModal(true); }} 
+                    className="text-sm bg-[var(--color-info-light)] text-[var(--color-info-dark)] px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[var(--color-info)] hover:text-white transition font-medium"
+                >
                    <ClipboardList className="w-4 h-4" /> Nuevo Examen
                 </button>
-                <button onClick={() => { setSelectedCourse(course.id); setContentType('task'); setShowAddModal(true); }} className="text-sm bg-green-50 text-green-600 px-3 py-2 rounded flex gap-2">
+                <button 
+                    onClick={() => { setSelectedCourse(course.id); setContentType('task'); setShowAddModal(true); }} 
+                    className="text-sm bg-[var(--color-success-light)] text-[var(--color-success-dark)] px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[var(--color-success)] hover:text-white transition font-medium"
+                >
                    <Upload className="w-4 h-4" /> Nueva Tarea
                 </button>
-                <button onClick={() => openGradingModal(course.id)} className="text-sm bg-orange-50 text-orange-600 px-3 py-2 rounded flex gap-2">
+                <button 
+                    onClick={() => openGradingModal(course.id)} 
+                    className="text-sm bg-[var(--color-warning-light)] text-[var(--color-warning-dark)] px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[var(--color-warning)] hover:text-white transition font-medium"
+                >
                    <CheckCircle className="w-4 h-4" /> Calificar Entregas
                 </button>
              </div>
@@ -250,67 +271,95 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
 
       {/* CREATE MODAL */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6">
-            <h2 className="text-xl font-bold mb-4">
-                {contentType === 'exam' ? 'Crear Examen Completo' : 'Crear Contenido'}
-            </h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center mb-6 border-b border-[var(--color-border)] pb-4">
+                <h2 className="text-xl font-bold text-[var(--color-primary)]">
+                    {contentType === 'exam' ? 'Crear Examen' : 'Crear Tarea'}
+                </h2>
+                <button onClick={() => setShowAddModal(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"><X className="w-5 h-5"/></button>
+            </div>
             
             {/* Basic Fields */}
             <div className="space-y-4 mb-6">
-               <input className="w-full p-2 border rounded" placeholder="Título" value={title} onChange={e => setTitle(e.target.value)} />
+               <div>
+                   <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Título</label>
+                   <input className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" placeholder="Ej. Parcial 1" value={title} onChange={e => setTitle(e.target.value)} />
+               </div>
+               
                {contentType === 'task' && (
                  <div className="grid grid-cols-2 gap-4">
-                    <input type="date" className="p-2 border rounded" value={dueDate} onChange={e => setDueDate(e.target.value)} />
-                    <input type="number" className="p-2 border rounded" placeholder="Puntos" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Fecha de Entrega</label>
+                        <input type="date" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Puntos Totales</label>
+                        <input type="number" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" placeholder="100" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
+                    </div>
                  </div>
                )}
                {contentType === 'exam' && (
-                   <div className="grid grid-cols-4 gap-2">
-                       <input type="date" className="p-2 border rounded" value={examDate} onChange={e => setExamDate(e.target.value)} />
-                       <input type="time" className="p-2 border rounded" value={examTime} onChange={e => setExamTime(e.target.value)} />
-                       <input type="number" placeholder="Duración (min)" className="p-2 border rounded" value={duration} onChange={e => setDuration(e.target.value)} />
-                       <input type="number" placeholder="Total Puntos" className="p-2 border rounded" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
+                   <div className="grid grid-cols-4 gap-4">
+                       <div>
+                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Fecha</label>
+                           <input type="date" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={examDate} onChange={e => setExamDate(e.target.value)} />
+                       </div>
+                       <div>
+                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Hora</label>
+                           <input type="time" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={examTime} onChange={e => setExamTime(e.target.value)} />
+                       </div>
+                       <div>
+                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Duración (min)</label>
+                           <input type="number" placeholder="60" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={duration} onChange={e => setDuration(e.target.value)} />
+                       </div>
+                       <div>
+                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Puntos</label>
+                           <input type="number" placeholder="100" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
+                       </div>
                    </div>
                )}
             </div>
 
             {/* Dynamic Questions for Exam */}
             {contentType === 'exam' && (
-                <div className="border-t pt-4">
-                    <h3 className="font-bold mb-2">Preguntas</h3>
+                <div className="border-t border-[var(--color-border)] pt-6 flex-1">
+                    <h3 className="font-bold mb-4 text-[var(--color-primary)]">Preguntas</h3>
                     {questions.map((q, idx) => (
-                        <div key={q.id} className="border p-4 rounded mb-4 bg-gray-50 relative">
-                            <button onClick={() => removeQuestion(q.id)} className="absolute top-2 right-2 text-red-500"><Trash2 className="w-4 h-4"/></button>
-                            <div className="flex gap-2 mb-2">
-                                <input className="flex-1 p-2 border rounded" placeholder="Texto de la pregunta" value={q.text} onChange={e => updateQuestion(q.id, 'text', e.target.value)} />
-                                <select className="p-2 border rounded" value={q.type} onChange={e => updateQuestion(q.id, 'type', e.target.value)}>
+                        <div key={q.id} className="border border-[var(--color-border)] p-4 rounded-lg mb-4 bg-[var(--color-bg)] relative group">
+                            <button onClick={() => removeQuestion(q.id)} className="absolute top-2 right-2 text-[var(--color-danger)] opacity-0 group-hover:opacity-100 transition hover:text-[var(--color-danger-dark)]"><Trash2 className="w-4 h-4"/></button>
+                            <div className="flex gap-3 mb-3">
+                                <span className="pt-2 font-bold text-[var(--color-text-secondary)]">{idx + 1}.</span>
+                                <input className="flex-1 p-2 border border-[var(--color-border)] rounded focus:outline-none focus:border-[var(--color-primary)]" placeholder="Texto de la pregunta" value={q.text} onChange={e => updateQuestion(q.id, 'text', e.target.value)} />
+                                <select className="p-2 border border-[var(--color-border)] rounded bg-white" value={q.type} onChange={e => updateQuestion(q.id, 'type', e.target.value)}>
                                     <option value="OPEN">Abierta</option>
                                     <option value="MULTIPLE_CHOICE">Selección Múltiple</option>
                                 </select>
-                                <input className="w-20 p-2 border rounded" type="number" placeholder="Pts" value={q.points} onChange={e => updateQuestion(q.id, 'points', e.target.value)} />
+                                <input className="w-20 p-2 border border-[var(--color-border)] rounded" type="number" placeholder="Pts" value={q.points} onChange={e => updateQuestion(q.id, 'points', e.target.value)} />
                             </div>
                             
                             {q.type === 'MULTIPLE_CHOICE' && (
-                                <div className="pl-4 space-y-2">
+                                <div className="pl-8 space-y-2">
                                     {q.options?.map((opt, optIdx) => (
-                                        <div key={optIdx} className="flex items-center gap-2">
-                                            <input type="radio" name={`q-${q.id}`} checked={opt.isCorrect} onChange={() => setCorrectOption(q.id, optIdx)} />
-                                            <input className="flex-1 p-1 border rounded text-sm" placeholder={`Opción ${optIdx + 1}`} value={opt.text} onChange={e => updateOption(q.id, optIdx, e.target.value)} />
+                                        <div key={optIdx} className="flex items-center gap-3">
+                                            <input type="radio" name={`q-${q.id}`} checked={opt.isCorrect} onChange={() => setCorrectOption(q.id, optIdx)} className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+                                            <input className="flex-1 p-1.5 border border-[var(--color-border)] rounded text-sm" placeholder={`Opción ${optIdx + 1}`} value={opt.text} onChange={e => updateOption(q.id, optIdx, e.target.value)} />
                                         </div>
                                     ))}
-                                    <button onClick={() => addOption(q.id)} className="text-xs text-blue-600">+ Agregar Opción</button>
+                                    <button onClick={() => addOption(q.id)} className="text-xs text-[var(--color-primary)] hover:underline font-medium mt-1">+ Agregar Opción</button>
                                 </div>
                             )}
                         </div>
                     ))}
-                    <button onClick={addQuestion} className="w-full py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded hover:bg-gray-50">+ Agregar Pregunta</button>
+                    <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition font-medium flex justify-center gap-2">
+                        <Plus className="w-5 h-5"/> Agregar Pregunta
+                    </button>
                 </div>
             )}
 
-            <div className="flex justify-end gap-2 mt-6">
-                <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border rounded">Cancelar</button>
-                <button onClick={handleSubmitContent} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded">Guardar</button>
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+                <button onClick={() => setShowAddModal(false)} className="px-5 py-2.5 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-bg)] transition">Cancelar</button>
+                <button onClick={handleSubmitContent} className="px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition font-medium">Guardar</button>
             </div>
           </div>
         </div>
@@ -318,33 +367,33 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
 
       {/* GRADING LIST MODAL */}
       {showGradingModal && gradingData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
-                <div className="flex justify-between mb-4">
-                    <h2 className="text-xl font-bold">Calificar: {gradingData.name}</h2>
-                    <button onClick={() => setShowGradingModal(false)}><X /></button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[var(--color-surface)] rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-6 border-b border-[var(--color-border)] pb-4">
+                    <h2 className="text-xl font-bold text-[var(--color-primary)]">Calificar: {gradingData.name}</h2>
+                    <button onClick={() => setShowGradingModal(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"><X /></button>
                 </div>
 
                 <div className="space-y-6">
                     {/* Assignments */}
                     <div>
-                        <h3 className="font-bold text-gray-600 mb-2">Tareas</h3>
+                        <h3 className="font-bold text-[var(--color-text)] mb-3 flex items-center gap-2"><Upload className="w-4 h-4"/> Tareas</h3>
                         {gradingData.assignments.map((a: any) => (
-                            <div key={a.id} className="mb-4 border rounded p-4">
-                                <h4 className="font-bold">{a.title}</h4>
-                                <div className="space-y-2 mt-2">
+                            <div key={a.id} className="mb-4 border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-bg)]">
+                                <h4 className="font-bold text-[var(--color-text)] mb-3">{a.title}</h4>
+                                <div className="space-y-2">
                                     {a.submissions.map((s: any) => (
-                                        <div key={s.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                            <span>{s.student.name}</span>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-xs px-2 py-1 rounded ${s.status === 'graded' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                    {s.status}
+                                        <div key={s.id} className="flex justify-between items-center bg-[var(--color-surface)] p-3 rounded border border-[var(--color-border)]">
+                                            <span className="font-medium">{s.student.name}</span>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${s.status === 'graded' ? 'bg-[var(--color-success-light)] text-[var(--color-success-dark)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning-dark)]'}`}>
+                                                    {s.status === 'graded' ? 'Calificado' : 'Pendiente'}
                                                 </span>
-                                                <button onClick={() => viewSubmission(s, 'assignment')} className="text-blue-600 text-sm hover:underline">Ver Entrega</button>
+                                                <button onClick={() => viewSubmission(s, 'assignment')} className="text-[var(--color-primary)] text-sm hover:underline font-medium">Ver Entrega</button>
                                             </div>
                                         </div>
                                     ))}
-                                    {a.submissions.length === 0 && <p className="text-sm text-gray-400">Sin entregas</p>}
+                                    {a.submissions.length === 0 && <p className="text-sm text-[var(--color-text-secondary)] italic">Sin entregas recibidas</p>}
                                 </div>
                             </div>
                         ))}
@@ -352,23 +401,23 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
 
                     {/* Exams */}
                     <div>
-                        <h3 className="font-bold text-gray-600 mb-2">Exámenes</h3>
+                        <h3 className="font-bold text-[var(--color-text)] mb-3 flex items-center gap-2"><ClipboardList className="w-4 h-4"/> Exámenes</h3>
                         {gradingData.exams.map((e: any) => (
-                             <div key={e.id} className="mb-4 border rounded p-4">
-                                 <h4 className="font-bold">{e.title}</h4>
-                                 <div className="space-y-2 mt-2">
+                             <div key={e.id} className="mb-4 border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-bg)]">
+                                 <h4 className="font-bold text-[var(--color-text)] mb-3">{e.title}</h4>
+                                 <div className="space-y-2">
                                      {e.results.map((r: any) => (
-                                         <div key={r.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
-                                             <span>{r.student.name}</span>
-                                             <div className="flex items-center gap-2">
-                                                <span className={`text-xs px-2 py-1 rounded ${r.status === 'graded' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                                    {r.status}
+                                         <div key={r.id} className="flex justify-between items-center bg-[var(--color-surface)] p-3 rounded border border-[var(--color-border)]">
+                                             <span className="font-medium">{r.student.name}</span>
+                                             <div className="flex items-center gap-3">
+                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${r.status === 'graded' ? 'bg-[var(--color-success-light)] text-[var(--color-success-dark)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning-dark)]'}`}>
+                                                    {r.status === 'graded' ? 'Calificado' : 'Pendiente'}
                                                 </span>
-                                                <button onClick={() => viewSubmission(r, 'exam')} className="text-blue-600 text-sm hover:underline">Revisar</button>
+                                                <button onClick={() => viewSubmission(r, 'exam')} className="text-[var(--color-primary)] text-sm hover:underline font-medium">Revisar</button>
                                              </div>
                                          </div>
                                      ))}
-                                     {e.results.length === 0 && <p className="text-sm text-gray-400">Sin intentos</p>}
+                                     {e.results.length === 0 && <p className="text-sm text-[var(--color-text-secondary)] italic">Sin intentos registrados</p>}
                                  </div>
                              </div>
                         ))}
@@ -380,60 +429,70 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
 
       {/* GRADING DETAIL MODAL */}
       {showGradingDetailModal && selectedSubmission && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-              <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
-                  <h2 className="text-xl font-bold mb-4">Revisión de Estudiante</h2>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+              <div className="bg-[var(--color-surface)] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl flex flex-col">
+                  <div className="flex justify-between items-center mb-6 border-b border-[var(--color-border)] pb-4">
+                      <h2 className="text-xl font-bold text-[var(--color-primary)]">Evaluación de Estudiante</h2>
+                      <button onClick={() => setShowGradingDetailModal(false)}><X className="text-[var(--color-text-secondary)]" /></button>
+                  </div>
                   
-                  {submissionType === 'assignment' ? (
-                      <div className="mb-6 p-4 bg-gray-50 rounded">
-                          <p className="font-bold">Archivo/Link:</p>
-                          <a href={selectedSubmission.fileUrl} target="_blank" className="text-blue-600 underline block mb-2">{selectedSubmission.fileUrl}</a>
-                          <p className="font-bold">Comentarios del estudiante:</p>
-                          <p>{selectedSubmission.content || 'Ninguno'}</p>
-                      </div>
-                  ) : (
-                      <div className="mb-6 space-y-4">
-                          {selectedSubmission.exam.questions.map((q: any) => {
-                              const ans = selectedSubmission.answers.find((a: any) => a.questionId === q.id);
-                              return (
-                                  <div key={q.id} className="border p-3 rounded">
-                                      <p className="font-bold mb-1">{q.text} ({q.points} pts)</p>
-                                      <div className="bg-gray-50 p-2 rounded text-sm">
-                                          <span className="font-semibold text-gray-600">Respuesta: </span>
-                                          {q.type === 'OPEN' ? (
-                                              <span>{ans?.text || 'Sin respuesta'}</span>
-                                          ) : (
-                                              <span>
-                                                  {q.options.find((o: any) => o.id === ans?.optionId)?.text} 
-                                                  {q.options.find((o: any) => o.id === ans?.optionId)?.isCorrect ? 
-                                                    <CheckCircle className="inline w-4 h-4 text-green-500 ml-2"/> : 
-                                                    (ans ? <X className="inline w-4 h-4 text-red-500 ml-2"/> : '')
-                                                  }
-                                              </span>
-                                          )}
-                                      </div>
-                                  </div>
-                              );
-                          })}
-                      </div>
-                  )}
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    {submissionType === 'assignment' ? (
+                        <div className="mb-6 p-5 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+                            <p className="font-bold text-[var(--color-text)] mb-2">Archivo Adjunto / Link:</p>
+                            <a href={selectedSubmission.fileUrl} target="_blank" className="text-[var(--color-primary)] hover:underline block mb-4 font-medium flex items-center gap-2"><FileText className="w-4 h-4"/> Ver entrega</a>
+                            
+                            <p className="font-bold text-[var(--color-text)] mb-2">Comentarios del estudiante:</p>
+                            <div className="p-3 bg-white rounded border border-[var(--color-border)] text-sm italic text-[var(--color-text-secondary)]">
+                                {selectedSubmission.content || 'Sin comentarios'}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mb-6 space-y-4">
+                            {selectedSubmission.exam.questions.map((q: any) => {
+                                const ans = selectedSubmission.answers.find((a: any) => a.questionId === q.id);
+                                return (
+                                    <div key={q.id} className="border border-[var(--color-border)] p-4 rounded-lg bg-[var(--color-bg)]">
+                                        <p className="font-bold mb-2 text-[var(--color-text)]">{q.text} <span className="text-xs font-normal text-[var(--color-text-secondary)]">({q.points} pts)</span></p>
+                                        <div className="bg-white p-3 rounded border border-[var(--color-border)] text-sm">
+                                            <span className="font-semibold text-[var(--color-text-secondary)] block mb-1">Respuesta del estudiante:</span>
+                                            {q.type === 'OPEN' ? (
+                                                <span className="text-[var(--color-text)]">{ans?.text || 'Sin respuesta'}</span>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[var(--color-text)] font-medium">
+                                                        {q.options.find((o: any) => o.id === ans?.optionId)?.text || 'Sin selección'} 
+                                                    </span>
+                                                    {q.options.find((o: any) => o.id === ans?.optionId)?.isCorrect ? 
+                                                        <span className="flex items-center text-[var(--color-success)] text-xs font-bold bg-[var(--color-success-light)] px-2 py-0.5 rounded"><CheckCircle className="w-3 h-3 mr-1"/> Correcto</span> : 
+                                                        (ans ? <span className="flex items-center text-[var(--color-danger)] text-xs font-bold bg-[var(--color-danger-light)] px-2 py-0.5 rounded"><X className="w-3 h-3 mr-1"/> Incorrecto</span> : '')
+                                                    }
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                  <div className="border-t pt-4">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div>
-                              <label className="block text-sm font-bold mb-1">Nota Final</label>
-                              <input type="number" className="w-full p-2 border rounded" value={gradeInput} onChange={e => setGradeInput(e.target.value)} />
-                          </div>
-                      </div>
-                      <div>
-                          <label className="block text-sm font-bold mb-1">Feedback</label>
-                          <textarea className="w-full p-2 border rounded" rows={3} value={feedbackInput} onChange={e => setFeedbackInput(e.target.value)} />
-                      </div>
+                    <div className="border-t border-[var(--color-border)] pt-6 bg-[var(--color-surface)]">
+                        <div className="grid grid-cols-2 gap-6 mb-4">
+                            <div>
+                                <label className="block text-sm font-bold mb-2 text-[var(--color-text)]">Nota Final (0-100)</label>
+                                <input type="number" className="w-full p-3 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none font-bold text-lg" value={gradeInput} onChange={e => setGradeInput(e.target.value)} />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold mb-2 text-[var(--color-text)]">Retroalimentación</label>
+                            <textarea className="w-full p-3 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" rows={3} value={feedbackInput} onChange={e => setFeedbackInput(e.target.value)} placeholder="Escribe un comentario para el estudiante..." />
+                        </div>
+                    </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 mt-6">
-                      <button onClick={() => setShowGradingDetailModal(false)} className="px-4 py-2 border rounded">Cancelar</button>
-                      <button onClick={submitGrade} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Publicar Nota</button>
+                  <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
+                      <button onClick={() => setShowGradingDetailModal(false)} className="px-5 py-2.5 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-bg)] transition">Cancelar</button>
+                      <button onClick={submitGrade} className="px-5 py-2.5 bg-[var(--color-success)] text-white rounded-lg hover:bg-[var(--color-success-dark)] transition font-medium shadow-sm">Publicar Calificación</button>
                   </div>
               </div>
           </div>

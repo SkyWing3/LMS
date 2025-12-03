@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Edit2, Trash2, Users, BookOpen, UserCheck, Search } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, BookOpen, UserCheck, Search, X, CheckCircle } from 'lucide-react';
 import { useState } from 'react';
 
 export function AdminPanel() {
@@ -41,49 +41,34 @@ export function AdminPanel() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-6 lg:p-8 space-y-8">
       <div className="mb-8">
-        <h1 className="text-[var(--color-primary)] mb-2">Panel de Administración</h1>
-        <p className="text-[var(--color-text-secondary)]">Gestiona cursos, docentes y estudiantes</p>
+        <h1 className="text-[var(--color-primary)] mb-2 text-2xl lg:text-3xl">Panel de Administración</h1>
+        <p className="text-[var(--color-text-secondary)]">Gestiona cursos, docentes y estudiantes del campus.</p>
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-md mb-6">
+      <div className="bg-[var(--color-surface)] rounded-xl shadow-sm mb-6">
         <div className="border-b border-[var(--color-border)]">
-          <div className="flex gap-4 px-6">
-            <button
-              onClick={() => setActiveTab('courses')}
-              className={`py-4 px-4 border-b-2 transition flex items-center gap-2 ${
-                activeTab === 'courses'
-                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'
-              }`}
-            >
-              <BookOpen className="w-5 h-5" />
-              Cursos
-            </button>
-            <button
-              onClick={() => setActiveTab('teachers')}
-              className={`py-4 px-4 border-b-2 transition flex items-center gap-2 ${
-                activeTab === 'teachers'
-                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'
-              }`}
-            >
-              <UserCheck className="w-5 h-5" />
-              Docentes
-            </button>
-            <button
-              onClick={() => setActiveTab('students')}
-              className={`py-4 px-4 border-b-2 transition flex items-center gap-2 ${
-                activeTab === 'students'
-                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              Estudiantes
-            </button>
+          <div className="flex gap-1 px-6 overflow-x-auto">
+            {[
+                { id: 'courses', label: 'Cursos', icon: BookOpen },
+                { id: 'teachers', label: 'Docentes', icon: UserCheck },
+                { id: 'students', label: 'Estudiantes', icon: Users }
+            ].map((tab) => (
+                <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`py-4 px-6 border-b-2 transition font-medium flex items-center gap-2 whitespace-nowrap ${
+                    activeTab === tab.id
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-surface)]/50'
+                    : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)]'
+                }`}
+                >
+                <tab.icon className="w-5 h-5" />
+                {tab.label}
+                </button>
+            ))}
           </div>
         </div>
 
@@ -97,12 +82,12 @@ export function AdminPanel() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={`Buscar ${activeTab === 'courses' ? 'cursos' : activeTab === 'teachers' ? 'docentes' : 'estudiantes'}...`}
-                className="w-full pl-11 pr-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                className="w-full pl-11 pr-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all shadow-sm"
               />
             </div>
             <button
               onClick={() => handleOpenModal('create')}
-              className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center justify-center gap-2 whitespace-nowrap"
+              className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition flex items-center justify-center gap-2 whitespace-nowrap shadow-sm font-medium"
             >
               <Plus className="w-5 h-5" />
               {activeTab === 'courses' && 'Crear Curso'}
@@ -111,224 +96,168 @@ export function AdminPanel() {
             </button>
           </div>
 
-          {/* Tabla de Cursos */}
-          {activeTab === 'courses' && (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--color-border)]">
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Código</th>
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Nombre</th>
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Docente</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Secciones</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Estudiantes</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {courses.map((course) => (
-                    <tr key={course.id} className="border-b border-[var(--color-border)] hover:bg-gray-50">
-                      <td className="py-4 px-4">{course.code}</td>
-                      <td className="py-4 px-4">{course.name}</td>
-                      <td className="py-4 px-4">{course.teacher}</td>
-                      <td className="py-4 px-4 text-center">{course.sections}</td>
-                      <td className="py-4 px-4 text-center">{course.students}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleOpenModal('assign')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                            title="Asignar"
-                          >
-                            <Users className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal('edit')}
-                            className="p-2 text-[var(--color-primary)] hover:bg-blue-50 rounded-lg transition"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal('delete')}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Tabla de Docentes */}
-          {activeTab === 'teachers' && (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--color-border)]">
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Nombre</th>
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Email</th>
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Departamento</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Cursos</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {teachers.map((teacher) => (
-                    <tr key={teacher.id} className="border-b border-[var(--color-border)] hover:bg-gray-50">
-                      <td className="py-4 px-4">{teacher.name}</td>
-                      <td className="py-4 px-4">{teacher.email}</td>
-                      <td className="py-4 px-4">{teacher.department}</td>
-                      <td className="py-4 px-4 text-center">{teacher.courses}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleOpenModal('assign')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                            title="Asignar cursos"
-                          >
-                            <BookOpen className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal('edit')}
-                            className="p-2 text-[var(--color-primary)] hover:bg-blue-50 rounded-lg transition"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal('delete')}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Tabla de Estudiantes */}
-          {activeTab === 'students' && (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-[var(--color-border)]">
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Nombre</th>
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Email</th>
-                    <th className="text-left py-4 px-4 text-[var(--color-text-secondary)]">Carrera</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Semestre</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Cursos</th>
-                    <th className="text-center py-4 px-4 text-[var(--color-text-secondary)]">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {students.map((student) => (
-                    <tr key={student.id} className="border-b border-[var(--color-border)] hover:bg-gray-50">
-                      <td className="py-4 px-4">{student.name}</td>
-                      <td className="py-4 px-4">{student.email}</td>
-                      <td className="py-4 px-4">{student.career}</td>
-                      <td className="py-4 px-4 text-center">{student.semester}</td>
-                      <td className="py-4 px-4 text-center">{student.courses}</td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleOpenModal('assign')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition"
-                            title="Asignar cursos"
-                          >
-                            <BookOpen className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal('edit')}
-                            className="p-2 text-[var(--color-primary)] hover:bg-blue-50 rounded-lg transition"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleOpenModal('delete')}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {/* Tabla Wrapper */}
+          <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left text-[var(--color-text)]">
+                    <thead className="text-xs text-[var(--color-text-secondary)] uppercase bg-[var(--color-bg)] border-b border-[var(--color-border)]">
+                        <tr>
+                            {activeTab === 'courses' && (
+                                <>
+                                    <th className="px-6 py-3">Código</th>
+                                    <th className="px-6 py-3">Nombre</th>
+                                    <th className="px-6 py-3">Docente</th>
+                                    <th className="px-6 py-3 text-center">Secciones</th>
+                                    <th className="px-6 py-3 text-center">Estudiantes</th>
+                                </>
+                            )}
+                            {activeTab === 'teachers' && (
+                                <>
+                                    <th className="px-6 py-3">Nombre</th>
+                                    <th className="px-6 py-3">Email</th>
+                                    <th className="px-6 py-3">Departamento</th>
+                                    <th className="px-6 py-3 text-center">Cursos</th>
+                                </>
+                            )}
+                            {activeTab === 'students' && (
+                                <>
+                                    <th className="px-6 py-3">Nombre</th>
+                                    <th className="px-6 py-3">Email</th>
+                                    <th className="px-6 py-3">Carrera</th>
+                                    <th className="px-6 py-3 text-center">Semestre</th>
+                                    <th className="px-6 py-3 text-center">Cursos</th>
+                                </>
+                            )}
+                            <th className="px-6 py-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--color-border)]">
+                        {activeTab === 'courses' && courses.map((course) => (
+                            <tr key={course.id} className="bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] transition-colors">
+                                <td className="px-6 py-4 font-medium">{course.code}</td>
+                                <td className="px-6 py-4">{course.name}</td>
+                                <td className="px-6 py-4">{course.teacher}</td>
+                                <td className="px-6 py-4 text-center">{course.sections}</td>
+                                <td className="px-6 py-4 text-center">{course.students}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button onClick={() => handleOpenModal('assign')} className="p-2 text-[var(--color-success)] hover:bg-[var(--color-success-light)] rounded-lg transition" title="Asignar"><Users className="w-4 h-4" /></button>
+                                        <button onClick={() => handleOpenModal('edit')} className="p-2 text-[var(--color-primary)] hover:bg-[var(--color-primary-surface)] rounded-lg transition" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={() => handleOpenModal('delete')} className="p-2 text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] rounded-lg transition" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                         {activeTab === 'teachers' && teachers.map((teacher) => (
+                            <tr key={teacher.id} className="bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] transition-colors">
+                                <td className="px-6 py-4 font-medium">{teacher.name}</td>
+                                <td className="px-6 py-4">{teacher.email}</td>
+                                <td className="px-6 py-4">{teacher.department}</td>
+                                <td className="px-6 py-4 text-center">{teacher.courses}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button onClick={() => handleOpenModal('assign')} className="p-2 text-[var(--color-success)] hover:bg-[var(--color-success-light)] rounded-lg transition" title="Asignar"><BookOpen className="w-4 h-4" /></button>
+                                        <button onClick={() => handleOpenModal('edit')} className="p-2 text-[var(--color-primary)] hover:bg-[var(--color-primary-surface)] rounded-lg transition" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={() => handleOpenModal('delete')} className="p-2 text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] rounded-lg transition" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                         {activeTab === 'students' && students.map((student) => (
+                            <tr key={student.id} className="bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] transition-colors">
+                                <td className="px-6 py-4 font-medium">{student.name}</td>
+                                <td className="px-6 py-4">{student.email}</td>
+                                <td className="px-6 py-4">{student.career}</td>
+                                <td className="px-6 py-4 text-center">{student.semester}</td>
+                                <td className="px-6 py-4 text-center">{student.courses}</td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button onClick={() => handleOpenModal('assign')} className="p-2 text-[var(--color-success)] hover:bg-[var(--color-success-light)] rounded-lg transition" title="Asignar"><BookOpen className="w-4 h-4" /></button>
+                                        <button onClick={() => handleOpenModal('edit')} className="p-2 text-[var(--color-primary)] hover:bg-[var(--color-primary-surface)] rounded-lg transition" title="Editar"><Edit2 className="w-4 h-4" /></button>
+                                        <button onClick={() => handleOpenModal('delete')} className="p-2 text-[var(--color-danger)] hover:bg-[var(--color-danger-light)] rounded-lg transition" title="Eliminar"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+              </div>
+          </div>
         </div>
       </div>
 
       {/* Modal genérico */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-[var(--color-border)] p-6 z-10">
-              <h3 className="text-[var(--color-primary)] mb-0">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity animate-in fade-in duration-200">
+          <div className="bg-[var(--color-surface)] rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 flex flex-col">
+            <div className="sticky top-0 bg-[var(--color-surface)] border-b border-[var(--color-border)] p-6 z-10 flex justify-between items-center">
+              <h3 className="text-[var(--color-primary)] mb-0 text-lg font-semibold">
                 {modalType === 'create' && `Crear ${activeTab === 'courses' ? 'Curso' : activeTab === 'teachers' ? 'Docente' : 'Estudiante'}`}
                 {modalType === 'edit' && 'Editar Información'}
                 {modalType === 'delete' && 'Confirmar Eliminación'}
-                {modalType === 'assign' && 'Asignar'}
+                {modalType === 'assign' && 'Asignar Recursos'}
               </h3>
+              <button onClick={handleCloseModal} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 flex-1">
               {modalType === 'delete' ? (
-                <div className="text-center py-6">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Trash2 className="w-8 h-8 text-red-600" />
+                <div className="text-center py-4">
+                  <div className="w-16 h-16 bg-[var(--color-danger-light)] rounded-full flex items-center justify-center mx-auto mb-4 text-[var(--color-danger)]">
+                    <Trash2 className="w-8 h-8" />
                   </div>
-                  <p className="text-lg mb-2">¿Estás seguro de eliminar este registro?</p>
-                  <p className="text-sm text-[var(--color-text-secondary)] mb-0">Esta acción no se puede deshacer.</p>
+                  <p className="text-lg font-medium mb-2 text-[var(--color-text)]">¿Estás seguro de continuar?</p>
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-0">Esta acción eliminará permanentemente el registro seleccionado.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-sm text-[var(--color-text-secondary)]">
-                    Formulario de {modalType === 'create' ? 'creación' : modalType === 'edit' ? 'edición' : 'asignación'}
-                  </p>
-                  {/* Aquí irían los campos específicos del formulario */}
+                  {/* Ejemplo de formulario */}
                   <div>
-                    <label className="block text-sm mb-2">Campo de ejemplo</label>
+                    <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">
+                        {activeTab === 'courses' ? 'Nombre del Curso' : 'Nombre Completo'}
+                    </label>
                     <input
                       type="text"
-                      className="w-full px-4 py-3 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
-                      placeholder="Ingresa información"
+                      className="w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition"
+                      placeholder="Ej. Cálculo I"
+                    />
+                  </div>
+                   <div>
+                    <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">
+                        {activeTab === 'courses' ? 'Código' : 'Correo Electrónico'}
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2.5 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition"
+                      placeholder={activeTab === 'courses' ? "Ej. MAT-101" : "ejemplo@ucb.edu.bo"}
                     />
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="sticky bottom-0 bg-white border-t border-[var(--color-border)] p-6 flex justify-end gap-4">
+            <div className="sticky bottom-0 bg-[var(--color-surface)] border-t border-[var(--color-border)] p-6 flex justify-end gap-3">
               <button
                 onClick={handleCloseModal}
-                className="px-6 py-3 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-gray-50 transition"
+                className="px-5 py-2.5 border border-[var(--color-border)] text-[var(--color-text)] rounded-lg hover:bg-[var(--color-surface-hover)] transition font-medium"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleCloseModal}
-                className={`px-6 py-3 text-white rounded-lg transition ${
+                className={`px-5 py-2.5 text-white rounded-lg transition font-medium shadow-sm flex items-center gap-2 ${
                   modalType === 'delete'
-                    ? 'bg-red-600 hover:bg-red-700'
+                    ? 'bg-[var(--color-danger)] hover:bg-[var(--color-danger-dark)]'
                     : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)]'
                 }`}
               >
-                {modalType === 'delete' ? 'Eliminar' : 'Guardar'}
+                {modalType === 'delete' && <Trash2 className="w-4 h-4" />}
+                {modalType === 'create' && <Plus className="w-4 h-4" />}
+                {modalType === 'edit' && <CheckCircle className="w-4 h-4" />}
+                {modalType === 'assign' && <Users className="w-4 h-4" />}
+                <span>{modalType === 'delete' ? 'Eliminar' : 'Guardar Cambios'}</span>
               </button>
             </div>
           </div>

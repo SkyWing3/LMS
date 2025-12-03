@@ -78,37 +78,40 @@ function SidebarContent({
   onLogout,
 }: SidebarContentProps) {
   return (
-    <>
+    <div className="flex flex-col h-full bg-[var(--color-primary)] text-white">
       {/* Logo y título */}
-      <div className="p-6 border-b border-blue-800">
+      <div className="p-6 border-b border-[var(--color-primary-dark)]">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 bg-[var(--color-surface)] rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
             <div className="w-10 h-10 bg-[var(--color-primary)] rounded-full flex items-center justify-center">
-              <span className="text-[var(--color-secondary)]">UCB</span>
+              <span className="text-[var(--color-secondary)] font-bold">UCB</span>
             </div>
           </div>
           <div className="min-w-0">
-            <h2 className="text-white truncate mb-0">Campus Virtual</h2>
-            <p className="text-blue-200 text-xs truncate">Universidad Católica Boliviana</p>
+            <h2 className="text-[var(--color-surface)] text-lg font-bold truncate mb-0 leading-tight">Campus Virtual</h2>
+            <p className="text-[var(--color-secondary)] text-xs truncate font-medium">Universidad Católica Boliviana</p>
           </div>
         </div>
       </div>
 
       {/* Información del usuario */}
-      <div className="p-6 border-b border-blue-800">
+      <div className="p-6 border-b border-[var(--color-primary-dark)] bg-[var(--color-primary-dark)]/30">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-[var(--color-secondary)] rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-12 h-12 bg-[var(--color-secondary)] rounded-full flex items-center justify-center flex-shrink-0 shadow-sm ring-2 ring-[var(--color-primary-light)]">
             <GraduationCap className="w-6 h-6 text-[var(--color-primary)]" />
           </div>
           <div className="min-w-0">
-            <p className="text-white truncate mb-0">{userName}</p>
-            <p className="text-blue-200 text-xs">{roleLabels[userRole]}</p>
+            <p className="text-white font-medium truncate mb-0 text-sm">{userName}</p>
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-[var(--color-success)]"></div>
+              <p className="text-[var(--color-surface)]/80 text-xs">{roleLabels[userRole]}</p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Menú de navegación */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -120,13 +123,13 @@ function SidebarContent({
                     onNavigate(item.id);
                     onClose();
                   }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-medium ${
                     isActive
-                      ? 'bg-[var(--color-secondary)] text-[var(--color-primary)]'
-                      : 'text-white hover:bg-blue-800'
+                      ? 'bg-[var(--color-secondary)] text-[var(--color-primary)] shadow-md translate-x-1'
+                      : 'text-[var(--color-surface)] hover:bg-[var(--color-primary-light)] hover:text-white'
                   }`}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-secondary)]'}`} />
                   <span>{item.label}</span>
                 </button>
               </li>
@@ -136,16 +139,16 @@ function SidebarContent({
       </nav>
 
       {/* Botón de cerrar sesión */}
-      <div className="p-4 border-t border-blue-800">
+      <div className="p-4 border-t border-[var(--color-primary-dark)] bg-[var(--color-primary-dark)]/20">
         <button
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white hover:bg-red-600 transition"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[var(--color-surface)] hover:bg-[var(--color-danger)] hover:text-white transition-colors duration-200 group"
         >
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
           <span>Cerrar Sesión</span>
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -160,7 +163,7 @@ export function Sidebar({ currentView, onNavigate, userRole, userName, onLogout 
       {/* Botón de menú móvil */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-[var(--color-primary)] text-white rounded-lg flex items-center justify-center shadow-lg"
+        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-[var(--color-primary)] text-white rounded-lg flex items-center justify-center shadow-lg border border-[var(--color-primary-light)]"
       >
         {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
       </button>
@@ -168,14 +171,14 @@ export function Sidebar({ currentView, onNavigate, userRole, userName, onLogout 
       {/* Overlay para móvil */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 transition-opacity"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 bg-[var(--color-primary)] flex flex-col transition-transform duration-300 ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-72 bg-[var(--color-primary)] flex flex-col transition-transform duration-300 shadow-xl lg:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
