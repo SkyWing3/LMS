@@ -65,6 +65,17 @@ cd ../..
 Create a `.env` file in the root directory if you need to override defaults.
 *   `DATABASE_URL`: Defaults to `"file:./dev.db"` (configured in `schema.prisma`).
 *   `EMAIL_SERVICE_URL`: URL of the running email service. Defaults to `http://localhost:3002` (Recommended).
+*   `JWT_SECRET`: Secret used to sign the session cookie. Set a long random string in production.
+*   `GOOGLE_CLIENT_ID`: OAuth client ID generated in the Google Cloud Console.
+*   `GOOGLE_CLIENT_SECRET`: OAuth client secret that pairs with the client ID.
+
+#### Google Sign-In Setup
+
+1. In [Google Cloud Console](https://console.cloud.google.com), create an **OAuth 2.0 Client ID** (type: Web application).
+2. Add `http://localhost:3000` (or your production origin) as an authorized JavaScript origin.
+3. Add `http://localhost:3000/api/auth/google/callback` (or the production equivalent) as an authorized redirect URI.
+4. Copy the generated **Client ID** and **Client Secret** into `.env` as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+5. Ensure that users’ institutional accounts already exist in Google Workspace, end with `@ucb.edu.bo`, **and** have a corresponding record en la base de datos del LMS. Solo esos usuarios podrán autorizarse con Google; no se crean cuentas nuevas automáticamente.
 
 ### Email Service Configuration
 

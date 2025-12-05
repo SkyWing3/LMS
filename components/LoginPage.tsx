@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Mail, Lock, LogIn } from 'lucide-react';
 import { login } from '@/app/actions/auth';
 
@@ -14,11 +14,32 @@ interface LoginPageProps {
   onLogin: (user: User) => void;
 }
 
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+  google_config: 'Google OAuth no está configurado correctamente. Contacta al administrador.',
+  google_cancelled: 'Inicio de sesión con Google cancelado.',
+  google_state: 'La sesión de Google expiró. Intenta nuevamente.',
+  google_domain: 'Solo se permiten correos institucionales @ucb.edu.bo para Google.',
+  google_not_registered: 'Credenciales inválidas. Tu cuenta no está registrada en el LMS.',
+  google_unknown: 'No se pudo iniciar sesión con Google. Intenta nuevamente.',
+};
+
 export function LoginPage({ onLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('authError');
+    if (authError) {
+      setError(GOOGLE_ERROR_MESSAGES[authError] || 'No se pudo iniciar sesión con Google.');
+      params.delete('authError');
+      const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,8 +65,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   const handleGoogleLogin = () => {
-    // Simulación de login con Google
-    alert('Login con Google no implementado en esta versión');
+    window.location.href = '/api/auth/google';
   };
 
   const handleDemoLogin = async (role: 'student' | 'teacher' | 'admin') => {
@@ -204,4 +224,3 @@ export function LoginPage({ onLogin }: LoginPageProps) {
     </div>
   );
 }
-

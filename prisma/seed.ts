@@ -33,6 +33,19 @@ async function main() {
     },
   })
 
+  const camila = await prisma.user.upsert({
+    where: { email: 'camila.rodas@ucb.edu.bo' },
+    update: {},
+    create: {
+      email: 'camila.rodas@ucb.edu.bo',
+      name: 'Camila Rodas',
+      password,
+      role: 'student',
+      career: 'Ingeniería de Sistemas',
+      semester: '6to Semestre'
+    },
+  })
+
   const mainTeacher = await prisma.user.upsert({
     where: { email: 'teacher@example.com' },
     update: {},
@@ -129,6 +142,21 @@ async function main() {
       update: { progress: c.progress },
       create: {
         userId: franco.id,
+        courseId: course.id,
+        progress: c.progress
+      }
+    })
+
+    await prisma.enrollment.upsert({
+      where: {
+        userId_courseId: {
+          userId: camila.id,
+          courseId: course.id
+        }
+      },
+      update: { progress: c.progress },
+      create: {
+        userId: camila.id,
         courseId: course.id,
         progress: c.progress
       }
