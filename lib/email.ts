@@ -4,7 +4,7 @@ export async function sendEmailNotification(
   text: string,
   html?: string
 ) {
-  const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://localhost:3001';
+  const emailServiceUrl = process.env.EMAIL_SERVICE_URL || 'http://localhost:3002';
   
   try {
     const response = await fetch(`${emailServiceUrl}/email/send`, {
