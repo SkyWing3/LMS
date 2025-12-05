@@ -50,7 +50,7 @@ export async function getStudentCourses() {
         id: e.course.id,
         name: e.course.name,
         code: e.course.code,
-        teacher: e.course.teacher.name,
+        teacher: e.course.teacher?.name || 'Sin asignar',
         schedule: 'Por definir', // Schedule not in DB yet, mocked
         students: e.course.enrollments.length,
         progress: progress,
