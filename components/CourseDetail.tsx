@@ -64,6 +64,7 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
   const [submissionUrl, setSubmissionUrl] = useState('');
   const [submissionContent, setSubmissionContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Exam Taking State
   const [showExamModal, setShowExamModal] = useState(false);
@@ -375,8 +376,94 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
               </div>
               <div className="space-y-4">
                   <div>
-                      <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Enlace del Archivo</label>
-                      <input type="url" placeholder="Google Drive, Dropbox, etc." className="w-full p-3 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" value={submissionUrl} onChange={e => setSubmissionUrl(e.target.value)} />
+                      <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Archivo de la Tarea</label>
+                      
+                      {!submissionUrl ? (
+                        <div 
+                          className={`border-2 border-dashed border-[var(--color-border)] rounded-lg p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${isUploading ? 'bg-[var(--color-bg)] opacity-50 cursor-not-allowed' : 'hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)]'}`}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          onDrop={async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (isUploading) return;
+                            
+                            const file = e.dataTransfer.files[0];
+                            if (file) {
+                              setIsUploading(true);
+                              const formData = new FormData();
+                              formData.append('file', file);
+
+                              try {
+                                const response = await fetch('http://localhost:3001/upload', {
+                                  method: 'POST',
+                                  body: formData,
+                                });
+
+                                if (!response.ok) throw new Error('Upload failed');
+
+                                const data = await response.json();
+                                setSubmissionUrl(`http://localhost:3001${data.path}`);
+                              } catch (error) {
+                                console.error('Upload error:', error);
+                                alert('Error al subir el archivo');
+                              } finally {
+                                setIsUploading(false);
+                              }
+                            }
+                          }}
+                          onClick={() => !isUploading && document.getElementById('file-upload-input')?.click()}
+                        >
+                          <input 
+                            type="file" 
+                            id="file-upload-input" 
+                            className="hidden" 
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setIsUploading(true);
+                                  const formData = new FormData();
+                                  formData.append('file', file);
+
+                                  try {
+                                    const response = await fetch('http://localhost:3001/upload', {
+                                      method: 'POST',
+                                      body: formData,
+                                    });
+
+                                    if (!response.ok) throw new Error('Upload failed');
+
+                                    const data = await response.json();
+                                    setSubmissionUrl(`http://localhost:3001${data.path}`);
+                                  } catch (error) {
+                                    console.error('Upload error:', error);
+                                    alert('Error al subir el archivo');
+                                  } finally {
+                                    setIsUploading(false);
+                                  }
+                                }
+                            }}
+                          />
+                          {isUploading ? (
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--color-primary)] mb-2"></div>
+                          ) : (
+                            <Upload className="w-10 h-10 text-[var(--color-text-secondary)] mb-3" />
+                          )}
+                          <p className="text-sm text-[var(--color-text-secondary)]">
+                            {isUploading ? 'Subiendo archivo...' : 'Arrastra un archivo aquí o haz clic para seleccionar'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 p-3 border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)]">
+                          <FileText className="w-5 h-5 text-[var(--color-primary)]" />
+                          <span className="flex-1 truncate text-sm text-[var(--color-text)]">{submissionUrl}</span>
+                          <button 
+                            onClick={() => setSubmissionUrl('')}
+                            className="p-1 hover:bg-[var(--color-surface-hover)] rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-danger)] transition"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                   </div>
                   <div>
                       <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Comentarios Adicionales</label>
