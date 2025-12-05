@@ -40,8 +40,8 @@ model Course {
   name        String
   code        String    @unique
   description String?
-  teacherId   Int
-  teacher     User      @relation("TeacherCourses", fields: [teacherId], references: [id])
+  teacherId   Int?
+  teacher     User?     @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: SetNull)
   
   enrollments Enrollment[]
   assignments Assignment[]
@@ -56,8 +56,8 @@ model Enrollment {
   progress  Float   @default(0)
   grade     Float?  // Final grade
   
-  user      User    @relation(fields: [userId], references: [id])
-  course    Course  @relation(fields: [courseId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -71,7 +71,7 @@ model Assignment {
   totalPoints Int
   weight      Float     @default(1.0) // Weight in final grade
 
-  course      Course    @relation(fields: [courseId], references: [id])
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
   submissions Submission[]
 }
 
@@ -86,8 +86,8 @@ model Submission {
   feedback      String?
   status        String    @default("submitted") // submitted, graded
 
-  assignment    Assignment @relation(fields: [assignmentId], references: [id])
-  student       User       @relation(fields: [studentId], references: [id])
+  assignment    Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student       User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model Material {
@@ -98,7 +98,7 @@ model Material {
   url       String
   createdAt DateTime @default(now())
 
-  course    Course   @relation(fields: [courseId], references: [id])
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model Exam {
@@ -110,7 +110,7 @@ model Exam {
   totalPoints Int
   weight      Float    @default(1.0)
 
-  course      Course   @relation(fields: [courseId], references: [id])
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   results     ExamResult[]
   questions   Question[]
 }
@@ -122,7 +122,7 @@ model Question {
   type        String   // 'MULTIPLE_CHOICE', 'OPEN'
   points      Int
   
-  exam        Exam     @relation(fields: [examId], references: [id])
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   options     QuestionOption[]
   answers     StudentAnswer[]
 }
@@ -133,7 +133,7 @@ model QuestionOption {
   text        String
   isCorrect   Boolean  @default(false)
   
-  question    Question @relation(fields: [questionId], references: [id])
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   answers     StudentAnswer[]
 }
 
@@ -145,8 +145,8 @@ model ExamResult {
   status    String   @default("submitted") // submitted, graded
   feedback  String?
   
-  exam      Exam     @relation(fields: [examId], references: [id])
-  student   User     @relation(fields: [studentId], references: [id])
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student   User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
   answers   StudentAnswer[]
 }
 
@@ -157,9 +157,9 @@ model StudentAnswer {
   text         String?  // For OPEN questions
   optionId     Int?     // For MULTIPLE_CHOICE questions
   
-  examResult   ExamResult     @relation(fields: [examResultId], references: [id])
-  question     Question       @relation(fields: [questionId], references: [id])
-  option       QuestionOption? @relation(fields: [optionId], references: [id])
+  examResult   ExamResult     @relation(fields: [examResultId], references: [id], onDelete: Cascade)
+  question     Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  option       QuestionOption? @relation(fields: [optionId], references: [id], onDelete: Cascade)
 }
 
 model SystemLog {
@@ -167,6 +167,6 @@ model SystemLog {
   action    String
   details   String?
   userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }

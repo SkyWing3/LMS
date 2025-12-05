@@ -153,7 +153,7 @@ export async function createCourse(data: any) {
       data: {
         name: data.name,
         code: data.code,
-        teacherId: parseInt(data.teacherId),
+        teacherId: data.teacherId ? parseInt(data.teacherId) : null,
       }
     });
 
@@ -180,7 +180,7 @@ export async function updateCourse(id: number, data: any) {
       data: {
         name: data.name,
         code: data.code,
-        teacherId: parseInt(data.teacherId),
+        teacherId: data.teacherId ? parseInt(data.teacherId) : null,
       }
     });
 
@@ -215,18 +215,27 @@ export async function deleteCourse(id: number) {
   }
 }
 
-export async function enrollStudent(courseId: number, studentId: number) {
+export async function enrollStudent(courseId: number, studentEmail: string) {
   try {
     const session = await getSession();
+    
+    const student = await prisma.user.findUnique({
+      where: { email: studentEmail }
+    });
+
+    if (!student) {
+      return { success: false, error: 'Estudiante no encontrado con ese correo' };
+    }
+
     await prisma.enrollment.create({
       data: {
         courseId,
-        userId: studentId
+        userId: student.id
       }
     });
 
     if (session?.user) {
-        await logActivity(session.user.id, 'Inscripción de estudiante', `Inscribió al estudiante ${studentId} en el curso ${courseId}`);
+        await logActivity(session.user.id, 'Inscripción de estudiante', `Inscribió al estudiante ${student.email} en el curso ${courseId}`);
     }
 
     revalidatePath('/admin-panel');

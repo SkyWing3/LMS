@@ -48,7 +48,7 @@ export function AdminPanel() {
     setModalType(type);
     setSelectedItem(item);
     setFormData(item || {}); // Pre-fill for edit
-    setAssignData({ courseId: '', userId: '' }); // Reset assign data
+    setAssignData({ courseId: '', userId: '', email: '' }); // Reset assign data
     setShowModal(true);
   };
 
@@ -72,7 +72,7 @@ export function AdminPanel() {
                 // Enroll student logic if needed from course tab, or assign teacher (update course)
                 // For simplicity, assignment usually happens from Student tab (enroll to course)
                 // But here let's assume enrolling a student to this course
-                result = await enrollStudent(selectedItem.id, parseInt(assignData.userId));
+                result = await enrollStudent(selectedItem.id, assignData.email);
             }
         } else {
             // Users (Teachers/Students)
@@ -84,7 +84,7 @@ export function AdminPanel() {
             else if (modalType === 'delete') result = await deleteUser(selectedItem.id);
             else if (modalType === 'assign' && activeTab === 'students') {
                  // Enroll this student to a course
-                 result = await enrollStudent(parseInt(assignData.courseId), selectedItem.id);
+                 result = await enrollStudent(parseInt(assignData.courseId), selectedItem.email);
             }
         }
 
@@ -329,13 +329,13 @@ export function AdminPanel() {
                           <>
                             <p className="text-sm font-bold">Curso: {selectedItem.name}</p>
                             <div>
-                                <label className="block text-sm font-medium mb-1">ID Estudiante</label>
+                                <label className="block text-sm font-medium mb-1">Correo del Estudiante</label>
                                 <input 
-                                    type="number" 
+                                    type="email" 
                                     className="w-full p-2.5 border border-[var(--color-border)] rounded-lg"
-                                    placeholder="ID del usuario"
-                                    value={assignData.userId}
-                                    onChange={e => setAssignData({...assignData, userId: e.target.value})}
+                                    placeholder="estudiante@ucb.edu.bo"
+                                    value={assignData.email || ''}
+                                    onChange={e => setAssignData({...assignData, email: e.target.value})}
                                 />
                             </div>
                           </>
