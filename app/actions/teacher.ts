@@ -176,22 +176,46 @@ export async function getCourseSubmissions(courseId: number) {
     });
 }
 
+import { sendEmailNotification } from '@/lib/email';
+
 export async function gradeExamSubmission(resultId: number, grade: number, feedback: string) {
     const session = await getSession();
     if (!session || session.user.role !== 'teacher') return { error: 'Unauthorized' };
 
     try {
-        await prisma.examResult.update({
+        const result = await prisma.examResult.update({
             where: { id: resultId },
             data: {
                 grade,
                 feedback,
                 status: 'graded'
+            },
+            include: {
+                student: true,
+                exam: {
+                    include: {
+                        course: true
+                    }
+                }
             }
         });
+
+        if (result.student.email && result.student.notifications) {
+            await sendEmailNotification(
+                result.student.email,
+                `Calificación publicada: ${result.exam.title}`,
+                `Hola ${result.student.name}, tu examen "${result.exam.title}" del curso "${result.exam.course.name}" ha sido calificado. Tu nota es: ${grade}. Comentarios: ${feedback || 'Sin comentarios'}.`,
+                `<p>Hola <strong>${result.student.name}</strong>,</p>
+                 <p>Tu examen "<strong>${result.exam.title}</strong>" del curso "<strong>${result.exam.course.name}</strong>" ha sido calificado.</p>
+                 <p><strong>Nota:</strong> ${grade}</p>
+                 <p><strong>Comentarios:</strong> ${feedback || 'Sin comentarios'}</p>`
+            );
+        }
+
         revalidatePath('/courses'); // simplified revalidation
         return { success: true };
     } catch (e) {
+        console.error('Error grading exam:', e);
         return { error: 'Error grading exam' };
     }
 }
@@ -201,17 +225,39 @@ export async function gradeAssignmentSubmission(submissionId: number, grade: num
     if (!session || session.user.role !== 'teacher') return { error: 'Unauthorized' };
 
     try {
-        await prisma.submission.update({
+        const submission = await prisma.submission.update({
             where: { id: submissionId },
             data: {
                 grade,
                 feedback,
                 status: 'graded'
+            },
+            include: {
+                student: true,
+                assignment: {
+                    include: {
+                        course: true
+                    }
+                }
             }
         });
+
+        if (submission.student.email && submission.student.notifications) {
+             await sendEmailNotification(
+                submission.student.email,
+                `Calificación publicada: ${submission.assignment.title}`,
+                `Hola ${submission.student.name}, tu tarea "${submission.assignment.title}" del curso "${submission.assignment.course.name}" ha sido calificada. Tu nota es: ${grade}. Comentarios: ${feedback || 'Sin comentarios'}.`,
+                `<p>Hola <strong>${submission.student.name}</strong>,</p>
+                 <p>Tu tarea "<strong>${submission.assignment.title}</strong>" del curso "<strong>${submission.assignment.course.name}</strong>" ha sido calificada.</p>
+                 <p><strong>Nota:</strong> ${grade}</p>
+                 <p><strong>Comentarios:</strong> ${feedback || 'Sin comentarios'}</p>`
+            );
+        }
+
         revalidatePath('/courses');
         return { success: true };
     } catch (e) {
+        console.error('Error grading assignment:', e);
         return { error: 'Error grading assignment' };
     }
 }

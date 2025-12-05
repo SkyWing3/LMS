@@ -46,3 +46,8 @@ next-env.d.ts
 /microservices/upload-service/node_modules
 /microservices/upload-service/dist
 /microservices/upload-service/uploads
+
+# microservices/email-service
+/microservices/email-service/node_modules
+/microservices/email-service/dist
+/microservices/email-service/.env

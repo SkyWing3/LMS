@@ -20,6 +20,19 @@ async function main() {
     },
   })
 
+  const franco = await prisma.user.upsert({
+    where: { email: 'franco.parra@ucb.edu.bo' },
+    update: {},
+    create: {
+      email: 'franco.parra@ucb.edu.bo',
+      name: 'Franco Parra Aguilar',
+      password,
+      role: 'student',
+      career: 'Ingeniería de Sistemas',
+      semester: '6to Semestre'
+    },
+  })
+
   const mainTeacher = await prisma.user.upsert({
     where: { email: 'teacher@example.com' },
     update: {},
@@ -106,17 +119,42 @@ async function main() {
       }
     })
     
-    // Create dummy assignments for each course
-    await prisma.assignment.create({
-      data: {
+    await prisma.enrollment.upsert({
+      where: {
+        userId_courseId: {
+          userId: franco.id,
+          courseId: course.id
+        }
+      },
+      update: { progress: c.progress },
+      create: {
+        userId: franco.id,
         courseId: course.id,
-        title: 'Tarea 1: Introducción',
-        description: 'Resolver los ejercicios del capítulo 1',
-        dueDate: new Date(new Date().setDate(new Date().getDate() + 7)),
-        totalPoints: 100,
-        weight: 0.3
+        progress: c.progress
       }
     })
+
+    // Create dummy assignments for each course
+    const assignmentTitle = 'Tarea 1: Introducción';
+    const existingAssignment = await prisma.assignment.findFirst({
+      where: {
+        courseId: course.id,
+        title: assignmentTitle
+      }
+    });
+
+    if (!existingAssignment) {
+      await prisma.assignment.create({
+        data: {
+          courseId: course.id,
+          title: assignmentTitle,
+          description: 'Resolver los ejercicios del capítulo 1',
+          dueDate: new Date(new Date().setDate(new Date().getDate() + 7)),
+          totalPoints: 100,
+          weight: 0.3
+        }
+      })
+    }
   }
 
   console.log('Seeding finished.')
