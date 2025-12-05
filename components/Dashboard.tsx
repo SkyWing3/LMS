@@ -311,26 +311,50 @@ export function Dashboard({ userRole, userName }: DashboardProps) {
         />
       </div>
 
-      <div className="bg-[var(--color-surface)] rounded-xl shadow-sm p-6">
-        <h3 className="text-[var(--color-primary)] mb-6 flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
-            <TrendingUp className="w-5 h-5" />
-            Actividad del Sistema
-        </h3>
-        {activity.length === 0 ? (
-             <p className="text-[var(--color-text-secondary)]">No hay actividad reciente.</p>
-        ) : (
-            <div className="space-y-4">
-            {activity.map((item) => (
-                <div key={item.id} className="pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0 hover:bg-[var(--color-surface-hover)] p-2 rounded-lg transition">
-                <p className="mb-1 font-medium text-[var(--color-text)]">{item.description}</p>
-                <span className="text-xs text-[var(--color-text-secondary)]">
-                    {new Date(item.time).toLocaleDateString()}
-                </span>
-                </div>
-            ))}
+            <div className="bg-[var(--color-surface)] rounded-xl shadow-sm p-6">
+
+              <h3 className="text-[var(--color-primary)] mb-6 flex items-center gap-2 border-b border-[var(--color-border)] pb-3">
+
+                  <TrendingUp className="w-5 h-5" />
+
+                  Actividad del Sistema
+
+              </h3>
+
+              {activity.length === 0 ? (
+
+                   <p className="text-[var(--color-text-secondary)]">No hay actividad reciente.</p>
+
+              ) : (
+
+                  <div className="space-y-4">
+
+                  {activity.map((item) => (
+
+                      <div key={item.id} className="pb-4 border-b border-[var(--color-border)] last:border-0 last:pb-0 hover:bg-[var(--color-surface-hover)] p-2 rounded-lg transition">
+
+                      <p className="mb-1 font-medium text-[var(--color-text)]">{item.description}</p>
+
+                      <span className="text-xs text-[var(--color-text-secondary)]">
+
+                          {new Date(item.time).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'medium' })}
+
+                      </span>
+
+                      </div>
+
+                  ))}
+
+                  </div>
+
+              )}
+
             </div>
-        )}
-      </div>
-    </div>
-  );
-}
+
+          </div>
+
+        );
+
+      }
+
+      

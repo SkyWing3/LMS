@@ -426,20 +426,21 @@ export async function getRecentActivity() {
         icon: 'file-text'
     }));
   } else if (role === 'admin') {
-    // Recent users and courses
-    const newUsers = await prisma.user.findMany({
-        take: 3,
-        orderBy: { createdAt: 'desc' }
+    // Recent system logs
+    const logs = await prisma.systemLog.findMany({
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        include: { user: true }
     });
     
-    return newUsers.map(u => ({
-        id: `user-${u.id}`,
-        type: 'user',
-        title: 'Nuevo usuario',
-        description: `Se ha registrado ${u.name} como ${u.role}`,
+    return logs.map(log => ({
+        id: `log-${log.id}`,
+        type: 'system',
+        title: log.action,
+        description: `${log.details} - por ${log.user.name}`,
         course: 'Sistema',
-        time: u.createdAt,
-        icon: 'user-plus'
+        time: log.createdAt,
+        icon: 'activity'
     }));
   }
 

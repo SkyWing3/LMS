@@ -32,6 +32,7 @@ model User {
   enrollments     Enrollment[]
   submissions     Submission[]
   examResults     ExamResult[]
+  systemLogs      SystemLog[]
 }
 
 model Course {
@@ -159,4 +160,13 @@ model StudentAnswer {
   examResult   ExamResult     @relation(fields: [examResultId], references: [id])
   question     Question       @relation(fields: [questionId], references: [id])
   option       QuestionOption? @relation(fields: [optionId], references: [id])
+}
+
+model SystemLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  details   String?
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
