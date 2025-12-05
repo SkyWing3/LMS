@@ -1,8 +1,9 @@
 'use client';
 
-import { ArrowLeft, FileText, CheckSquare, ClipboardList, Calendar, Download, ExternalLink, Upload, X, CheckCircle } from 'lucide-react';
+import { ArrowLeft, FileText, CheckSquare, ClipboardList, Calendar, Download, ExternalLink, Upload, X, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getCourseDetails } from '@/app/actions/data';
+import { createResource } from '@/app/actions/teacher';
 import { submitAssignment, getExamDetailsForStudent, submitExam } from '@/app/actions/student';
 import { getUser } from '@/app/actions/auth';
 
@@ -66,64 +67,112 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Resource Upload State
+  const [showResourceModal, setShowResourceModal] = useState(false);
+  const [resourceQueue, setResourceQueue] = useState<File[]>([]);
+  const [isUploadingResources, setIsUploadingResources] = useState(false);
+
   // Exam Taking State
   const [showExamModal, setShowExamModal] = useState(false);
   const [activeExam, setActiveExam] = useState<any>(null);
   const [examAnswers, setExamAnswers] = useState<Record<number, any>>({}); // questionId -> { text?, optionId? }
 
-  useEffect(() => {
-    const fetchData = async () => {
-        const [data, user] = await Promise.all([
-          getCourseDetails(courseId),
-          getUser()
-        ]);
-        
-        if (user) setUserRole(user.role);
+  const fetchData = async () => {
+    const [data, user] = await Promise.all([
+      getCourseDetails(courseId),
+      getUser()
+    ]);
     
-        if (data) {
-          setCourse({
-            id: data.id,
-            name: data.name,
-            code: data.code,
-            teacher: data.teacher,
-            color: 'bg-[var(--color-primary)]', 
-          });
-    
-          setTasks(data.assignments.map((a: any) => ({
-            id: a.id,
-            title: a.title,
-            description: a.description,
-            dueDate: new Date(a.dueDate).toLocaleDateString(),
-            status: a.submissions[0]?.status || 'pending',
-            points: a.totalPoints,
-            grade: a.submissions[0]?.grade
-          })));
-    
-          setResources(data.materials.map((m: any) => ({
-            id: m.id,
-            title: m.title,
-            type: m.type,
-            size: 'Unknown', 
-            date: new Date(m.createdAt).toLocaleDateString(),
-            url: m.url
-          })));
-    
-          setExams(data.exams.map((e: any) => ({
-            id: e.id,
-            title: e.title,
-            date: new Date(e.date).toLocaleDateString(),
-            time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-            duration: `${e.duration} min`,
-            status: e.results[0]?.status || 'upcoming', // submitted, graded, upcoming
-            grade: e.results[0]?.grade,
-            topics: []
-          })));
-        }
-        setIsLoading(false);
-      };
+    if (user) setUserRole(user.role);
 
+    if (data) {
+      setCourse({
+        id: data.id,
+        name: data.name,
+        code: data.code,
+        teacher: data.teacher,
+        color: 'bg-[var(--color-primary)]', 
+      });
+
+      setTasks(data.assignments.map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        dueDate: new Date(a.dueDate).toLocaleDateString(),
+        status: a.submissions[0]?.status || 'pending',
+        points: a.totalPoints,
+        grade: a.submissions[0]?.grade
+      })));
+
+      setResources(data.materials.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        type: m.type,
+        size: 'Unknown', 
+        date: new Date(m.createdAt).toLocaleDateString(),
+        url: m.url
+      })));
+
+      setExams(data.exams.map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        date: new Date(e.date).toLocaleDateString(),
+        time: new Date(e.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        duration: `${e.duration} min`,
+        status: e.results[0]?.status || 'upcoming', // submitted, graded, upcoming
+        grade: e.results[0]?.grade,
+        topics: []
+      })));
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
     fetchData();
   }, [courseId]);
+
+  // --- Resource Upload Logic ---
+  const handleUploadResources = async () => {
+    if (resourceQueue.length === 0) return;
+    setIsUploadingResources(true);
+
+    try {
+        for (const file of resourceQueue) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 1. Upload to Microservice
+            const uploadRes = await fetch('http://localhost:3001/upload', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (!uploadRes.ok) throw new Error(`Failed to upload ${file.name}`);
+            const uploadData = await uploadRes.json();
+            const fileUrl = `http://localhost:3001${uploadData.path}`;
+
+            // 2. Create Material in DB
+            const resourceFormData = new FormData();
+            resourceFormData.append('courseId', courseId.toString());
+            resourceFormData.append('title', file.name);
+            resourceFormData.append('type', file.name.split('.').pop()?.toUpperCase() || 'FILE');
+            resourceFormData.append('url', fileUrl);
+            resourceFormData.append('description', 'Uploaded via drag-and-drop');
+
+            await createResource(resourceFormData);
+        }
+
+        alert('Recursos subidos correctamente');
+        setResourceQueue([]);
+        setShowResourceModal(false);
+        fetchData(); 
+    } catch (error) {
+        console.error(error);
+        alert('Error al subir recursos');
+    } finally {
+        setIsUploadingResources(false);
+    }
+  };
 
   // --- Assignment Logic ---
   const handleOpenSubmit = (taskId: number) => {
@@ -245,6 +294,13 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
           {/* Resources Content */}
           {activeTab === 'resources' && (
             <div className="space-y-3">
+              {userRole === 'teacher' && (
+                  <div className="flex justify-end mb-4">
+                      <button onClick={() => setShowResourceModal(true)} className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition shadow-sm text-sm font-medium">
+                          <Plus className="w-4 h-4" /> Agregar Recursos
+                      </button>
+                  </div>
+              )}
               {resources.length === 0 && (
                 <div className="text-center py-12 text-[var(--color-text-secondary)]">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-20"/>
@@ -534,6 +590,82 @@ export function CourseDetail({ courseId, onBack }: CourseDetailProps) {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Resource Upload Modal */}
+      {showResourceModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
+            <div className="bg-[var(--color-surface)] rounded-xl shadow-2xl max-w-lg w-full p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-lg text-[var(--color-primary)]">Agregar Recursos</h3>
+                    <button onClick={() => setShowResourceModal(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"><X className="w-5 h-5"/></button>
+                </div>
+                
+                <div className="space-y-4">
+                    <div 
+                        className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)] transition"
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                setResourceQueue(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+                            }
+                        }}
+                        onClick={() => document.getElementById('resource-upload-input')?.click()}
+                    >
+                        <input 
+                            type="file" 
+                            id="resource-upload-input" 
+                            className="hidden" 
+                            multiple
+                            onChange={(e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                    setResourceQueue(prev => [...prev, ...Array.from(e.target.files || [])]);
+                                }
+                            }}
+                        />
+                        <Upload className="w-10 h-10 text-[var(--color-text-secondary)] mb-3" />
+                        <p className="text-sm text-[var(--color-text-secondary)]">
+                            Arrastra tus archivos aquí o haz clic para seleccionar
+                        </p>
+                    </div>
+
+                    {resourceQueue.length > 0 && (
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                            {resourceQueue.map((file, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <FileText className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />
+                                        <span className="text-sm text-[var(--color-text)] truncate">{file.name}</span>
+                                    </div>
+                                    <button onClick={() => setResourceQueue(prev => prev.filter((_, i) => i !== idx))} className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="pt-2">
+                        <button 
+                            onClick={handleUploadResources} 
+                            disabled={isUploadingResources || resourceQueue.length === 0} 
+                            className="w-full py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] disabled:opacity-70 transition font-medium shadow-sm flex justify-center items-center gap-2"
+                        >
+                            {isUploadingResources ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                                    Subiendo {resourceQueue.length} archivo(s)...
+                                </>
+                            ) : (
+                                `Subir y Guardar ${resourceQueue.length > 0 ? `(${resourceQueue.length})` : ''}`
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );

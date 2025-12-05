@@ -66,6 +66,9 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
   const [feedbackInput, setFeedbackInput] = useState('');
   const [submissionType, setSubmissionType] = useState<'assignment' | 'exam' | null>(null);
 
+  const [resourceQueue, setResourceQueue] = useState<File[]>([]);
+  const [isUploadingResources, setIsUploadingResources] = useState(false);
+
   const loadCourses = () => {
     getTeacherCourses().then((data) => {
       const mapped = data.map((c: any) => ({
@@ -85,6 +88,44 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
   useEffect(() => {
     loadCourses();
   }, []);
+
+  // --- Resource Upload Logic ---
+  const handleUploadResources = async () => {
+    if (!selectedCourse || resourceQueue.length === 0) return;
+    setIsUploadingResources(true);
+
+    try {
+        for (const file of resourceQueue) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // 1. Upload
+            const uploadRes = await fetch('http://localhost:3001/upload', { method: 'POST', body: formData });
+            if (!uploadRes.ok) throw new Error('Upload failed');
+            const uploadData = await uploadRes.json();
+            const fileUrl = `http://localhost:3001${uploadData.path}`;
+
+            // 2. Create
+            const resourceFormData = new FormData();
+            resourceFormData.append('courseId', selectedCourse.toString());
+            resourceFormData.append('title', file.name);
+            resourceFormData.append('type', file.name.split('.').pop()?.toUpperCase() || 'FILE');
+            resourceFormData.append('url', fileUrl);
+            resourceFormData.append('description', 'Uploaded via dashboard');
+
+            await createResource(resourceFormData);
+        }
+        alert('Recursos creados exitosamente');
+        setShowAddModal(false);
+        setResourceQueue([]);
+        loadCourses(); 
+    } catch (e) {
+        console.error(e);
+        alert('Error al subir recursos');
+    } finally {
+        setIsUploadingResources(false);
+    }
+  };
 
   // --- Exam Creator Logic ---
   const addQuestion = () => {
@@ -247,6 +288,12 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
              
              <div className="flex flex-wrap gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
                 <button 
+                    onClick={() => { setSelectedCourse(course.id); setContentType('resource'); setShowAddModal(true); }} 
+                    className="text-sm bg-[var(--color-primary-surface)] text-[var(--color-primary)] px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[var(--color-primary)] hover:text-white transition font-medium"
+                >
+                   <FileText className="w-4 h-4" /> Recursos
+                </button>
+                <button 
                     onClick={() => { setSelectedCourse(course.id); setContentType('exam'); setShowAddModal(true); }} 
                     className="text-sm bg-[var(--color-info-light)] text-[var(--color-info-dark)] px-4 py-2.5 rounded-lg flex items-center gap-2 hover:bg-[var(--color-info)] hover:text-white transition font-medium"
                 >
@@ -275,91 +322,153 @@ export function TeacherCoursesView({ onSelectCourse }: TeacherCoursesViewProps) 
           <div className="bg-[var(--color-surface)] rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl flex flex-col">
             <div className="flex justify-between items-center mb-6 border-b border-[var(--color-border)] pb-4">
                 <h2 className="text-xl font-bold text-[var(--color-primary)]">
-                    {contentType === 'exam' ? 'Crear Examen' : 'Crear Tarea'}
+                    {contentType === 'exam' ? 'Crear Examen' : (contentType === 'task' ? 'Crear Tarea' : 'Agregar Recursos')}
                 </h2>
                 <button onClick={() => setShowAddModal(false)} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"><X className="w-5 h-5"/></button>
             </div>
             
-            {/* Basic Fields */}
-            <div className="space-y-4 mb-6">
-               <div>
-                   <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Título</label>
-                   <input className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" placeholder="Ej. Parcial 1" value={title} onChange={e => setTitle(e.target.value)} />
-               </div>
-               
-               {contentType === 'task' && (
-                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Fecha de Entrega</label>
-                        <input type="date" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+            {contentType === 'resource' ? (
+               <div className="space-y-4 flex-1">
+                    <div 
+                        className="border-2 border-dashed border-[var(--color-border)] rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)] transition"
+                        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                setResourceQueue(prev => [...prev, ...Array.from(e.dataTransfer.files)]);
+                            }
+                        }}
+                        onClick={() => document.getElementById('resource-upload-input')?.click()}
+                    >
+                        <input 
+                            type="file" 
+                            id="resource-upload-input" 
+                            className="hidden" 
+                            multiple
+                            onChange={(e) => {
+                                if (e.target.files && e.target.files.length > 0) {
+                                    setResourceQueue(prev => [...prev, ...Array.from(e.target.files || [])]);
+                                }
+                            }}
+                        />
+                        <Upload className="w-10 h-10 text-[var(--color-text-secondary)] mb-3" />
+                        <p className="text-sm text-[var(--color-text-secondary)]">
+                            Arrastra tus archivos aquí o haz clic para seleccionar
+                        </p>
                     </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Puntos Totales</label>
-                        <input type="number" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" placeholder="100" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
-                    </div>
-                 </div>
-               )}
-               {contentType === 'exam' && (
-                   <div className="grid grid-cols-4 gap-4">
-                       <div>
-                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Fecha</label>
-                           <input type="date" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={examDate} onChange={e => setExamDate(e.target.value)} />
-                       </div>
-                       <div>
-                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Hora</label>
-                           <input type="time" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={examTime} onChange={e => setExamTime(e.target.value)} />
-                       </div>
-                       <div>
-                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Duración (min)</label>
-                           <input type="number" placeholder="60" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={duration} onChange={e => setDuration(e.target.value)} />
-                       </div>
-                       <div>
-                           <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Puntos</label>
-                           <input type="number" placeholder="100" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
-                       </div>
-                   </div>
-               )}
-            </div>
 
-            {/* Dynamic Questions for Exam */}
-            {contentType === 'exam' && (
-                <div className="border-t border-[var(--color-border)] pt-6 flex-1">
-                    <h3 className="font-bold mb-4 text-[var(--color-primary)]">Preguntas</h3>
-                    {questions.map((q, idx) => (
-                        <div key={q.id} className="border border-[var(--color-border)] p-4 rounded-lg mb-4 bg-[var(--color-bg)] relative group">
-                            <button onClick={() => removeQuestion(q.id)} className="absolute top-2 right-2 text-[var(--color-danger)] opacity-0 group-hover:opacity-100 transition hover:text-[var(--color-danger-dark)]"><Trash2 className="w-4 h-4"/></button>
-                            <div className="flex gap-3 mb-3">
-                                <span className="pt-2 font-bold text-[var(--color-text-secondary)]">{idx + 1}.</span>
-                                <input className="flex-1 p-2 border border-[var(--color-border)] rounded focus:outline-none focus:border-[var(--color-primary)]" placeholder="Texto de la pregunta" value={q.text} onChange={e => updateQuestion(q.id, 'text', e.target.value)} />
-                                <select className="p-2 border border-[var(--color-border)] rounded bg-white" value={q.type} onChange={e => updateQuestion(q.id, 'type', e.target.value)}>
-                                    <option value="OPEN">Abierta</option>
-                                    <option value="MULTIPLE_CHOICE">Selección Múltiple</option>
-                                </select>
-                                <input className="w-20 p-2 border border-[var(--color-border)] rounded" type="number" placeholder="Pts" value={q.points} onChange={e => updateQuestion(q.id, 'points', e.target.value)} />
-                            </div>
-                            
-                            {q.type === 'MULTIPLE_CHOICE' && (
-                                <div className="pl-8 space-y-2">
-                                    {q.options?.map((opt, optIdx) => (
-                                        <div key={optIdx} className="flex items-center gap-3">
-                                            <input type="radio" name={`q-${q.id}`} checked={opt.isCorrect} onChange={() => setCorrectOption(q.id, optIdx)} className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
-                                            <input className="flex-1 p-1.5 border border-[var(--color-border)] rounded text-sm" placeholder={`Opción ${optIdx + 1}`} value={opt.text} onChange={e => updateOption(q.id, optIdx, e.target.value)} />
-                                        </div>
-                                    ))}
-                                    <button onClick={() => addOption(q.id)} className="text-xs text-[var(--color-primary)] hover:underline font-medium mt-1">+ Agregar Opción</button>
+                    {resourceQueue.length > 0 && (
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto pr-2">
+                            {resourceQueue.map((file, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)]">
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <FileText className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />
+                                        <span className="text-sm text-[var(--color-text)] truncate">{file.name}</span>
+                                    </div>
+                                    <button onClick={() => setResourceQueue(prev => prev.filter((_, i) => i !== idx))} className="text-[var(--color-text-secondary)] hover:text-[var(--color-danger)]">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
-                            )}
+                            ))}
                         </div>
-                    ))}
-                    <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition font-medium flex justify-center gap-2">
-                        <Plus className="w-5 h-5"/> Agregar Pregunta
-                    </button>
+                    )}
+               </div>
+            ) : (
+                <>
+                {/* Basic Fields */}
+                <div className="space-y-4 mb-6">
+                   <div>
+                       <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Título</label>
+                       <input className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" placeholder="Ej. Parcial 1" value={title} onChange={e => setTitle(e.target.value)} />
+                   </div>
+                   
+                   {contentType === 'task' && (
+                     <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Fecha de Entrega</label>
+                            <input type="date" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Puntos Totales</label>
+                            <input type="number" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:outline-none" placeholder="100" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
+                        </div>
+                     </div>
+                   )}
+                   {contentType === 'exam' && (
+                       <div className="grid grid-cols-4 gap-4">
+                           <div>
+                               <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Fecha</label>
+                               <input type="date" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={examDate} onChange={e => setExamDate(e.target.value)} />
+                           </div>
+                           <div>
+                               <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Hora</label>
+                               <input type="time" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={examTime} onChange={e => setExamTime(e.target.value)} />
+                           </div>
+                           <div>
+                               <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Duración (min)</label>
+                               <input type="number" placeholder="60" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={duration} onChange={e => setDuration(e.target.value)} />
+                           </div>
+                           <div>
+                               <label className="block text-sm font-medium mb-1 text-[var(--color-text)]">Puntos</label>
+                               <input type="number" placeholder="100" className="w-full p-2.5 border border-[var(--color-border)] rounded-lg" value={totalPoints} onChange={e => setTotalPoints(e.target.value)} />
+                           </div>
+                       </div>
+                   )}
                 </div>
+
+                {/* Dynamic Questions for Exam */}
+                {contentType === 'exam' && (
+                    <div className="border-t border-[var(--color-border)] pt-6 flex-1">
+                        <h3 className="font-bold mb-4 text-[var(--color-primary)]">Preguntas</h3>
+                        {questions.map((q, idx) => (
+                            <div key={q.id} className="border border-[var(--color-border)] p-4 rounded-lg mb-4 bg-[var(--color-bg)] relative group">
+                                <button onClick={() => removeQuestion(q.id)} className="absolute top-2 right-2 text-[var(--color-danger)] opacity-0 group-hover:opacity-100 transition hover:text-[var(--color-danger-dark)]"><Trash2 className="w-4 h-4"/></button>
+                                <div className="flex gap-3 mb-3">
+                                    <span className="pt-2 font-bold text-[var(--color-text-secondary)]">{idx + 1}.</span>
+                                    <input className="flex-1 p-2 border border-[var(--color-border)] rounded focus:outline-none focus:border-[var(--color-primary)]" placeholder="Texto de la pregunta" value={q.text} onChange={e => updateQuestion(q.id, 'text', e.target.value)} />
+                                    <select className="p-2 border border-[var(--color-border)] rounded bg-white" value={q.type} onChange={e => updateQuestion(q.id, 'type', e.target.value)}>
+                                        <option value="OPEN">Abierta</option>
+                                        <option value="MULTIPLE_CHOICE">Selección Múltiple</option>
+                                    </select>
+                                    <input className="w-20 p-2 border border-[var(--color-border)] rounded" type="number" placeholder="Pts" value={q.points} onChange={e => updateQuestion(q.id, 'points', e.target.value)} />
+                                </div>
+                                
+                                {q.type === 'MULTIPLE_CHOICE' && (
+                                    <div className="pl-8 space-y-2">
+                                        {q.options?.map((opt, optIdx) => (
+                                            <div key={optIdx} className="flex items-center gap-3">
+                                                <input type="radio" name={`q-${q.id}`} checked={opt.isCorrect} onChange={() => setCorrectOption(q.id, optIdx)} className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]" />
+                                                <input className="flex-1 p-1.5 border border-[var(--color-border)] rounded text-sm" placeholder={`Opción ${optIdx + 1}`} value={opt.text} onChange={e => updateOption(q.id, optIdx, e.target.value)} />
+                                            </div>
+                                        ))}
+                                        <button onClick={() => addOption(q.id)} className="text-xs text-[var(--color-primary)] hover:underline font-medium mt-1">+ Agregar Opción</button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        <button onClick={addQuestion} className="w-full py-3 border-2 border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)] rounded-lg hover:bg-[var(--color-bg)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition font-medium flex justify-center gap-2">
+                            <Plus className="w-5 h-5"/> Agregar Pregunta
+                        </button>
+                    </div>
+                )}
+                </>
             )}
 
             <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
                 <button onClick={() => setShowAddModal(false)} className="px-5 py-2.5 border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-bg)] transition">Cancelar</button>
-                <button onClick={handleSubmitContent} className="px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition font-medium">Guardar</button>
+                <button 
+                    onClick={contentType === 'resource' ? handleUploadResources : handleSubmitContent} 
+                    className="px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary-dark)] transition font-medium flex items-center gap-2"
+                    disabled={contentType === 'resource' ? (isUploadingResources || resourceQueue.length === 0) : false}
+                >
+                    {contentType === 'resource' && isUploadingResources ? (
+                        <>
+                           <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                           Subiendo...
+                        </>
+                    ) : 'Guardar'}
+                </button>
             </div>
           </div>
         </div>
